@@ -817,35 +817,7 @@ python tools/probe_errors.py      # 51 個畸形請求，確認無 5xx
 
 ---
 
-## 6. 給 Member A（前端）的整合建議
-
-- 先打 `GET /appliances` 取得表單預設值與提示文字，再讓使用者修改。
-- 送出的家電資料保留 `appliance_id`（Member B 的主鍵），`/simulate` 會用到。
-- 錯誤處理：讀 `code` 判斷類型、`field` 指出哪個欄位、
-  `details[]` 可一次列出所有問題。
-- 電費畫面直接用 `lines[]` 畫級距堆疊圖，`effective_rate_per_kwh` 顯示「平均每度」。
-- 建議畫面用 `reason_zh` + `suggestion_zh` 當卡片內容，
-  `total_potential_monthly_saving_twd` 當主數字，
-  `comprehensive_*` 放在次要位置（避免看起來像重複計算）。
-- 負載畫面務必一起顯示 `disclaimer_zh` 與 `warnings[]`。
-- `docs/openapi.json` 可以直接餵給型別產生器或 Postman。
-
-## 7. 給 Member B（資料庫）的整合建議
-
-- `app/data/tariffs.json` 與 `app/data/appliances.json` 就是建議的資料表內容，
-  需要新增方案時**只改 JSON**（`load_tariffs()` 有快取，重啟即生效）。
-- 目前所有端點都是無狀態的：前端送完整資料，後端只做計算。
-  接上資料庫後，可以在 `app/services/` 加一層，把 `appliance_id` 換成資料庫查詢結果，
-  計算模組不用改。
-- 資料格式對應：`appliances` 表的欄位可直接對應 `ApplianceIn`
-  （`appliance_id`、`name`、`category`、`power_watts`、`hours_per_day`、
-  `days_per_month`、`quantity`、`voltage`）。
-- 模擬結果要在資料庫留下紀錄時，建議存 `baseline`／`modified`／`delta` 三塊，
-  並記下 `plan_id`、`month` 與當時的電價資料版本。
-
----
-
-## 8. 安裝疑難排解
+## 6. 安裝疑難排解
 
 一般環境請直接用：
 
@@ -856,7 +828,7 @@ python -m venv .venv
 
 以下兩種情況需要替代方案。
 
-### 8.1 `pip install` 在建置 `pydantic-core` 時失敗
+### 6.1 `pip install` 在建置 `pydantic-core` 時失敗
 
 見 2.1 的說明。`requirements.txt` 已經選用同時支援 Python 3.12／3.14 的版本
 （`pydantic==2.14.1` / `pydantic-core==2.50.1`），**不需要 Rust 或 C 編譯器**。
@@ -868,7 +840,7 @@ python -m venv .venv
 python tools/resolve_pins.py --tag cp312 --tag cp314
 ```
 
-### 8.2 `python -m venv` 失敗（`ensurepip` 不可用）
+### 6.2 `python -m venv` 失敗（`ensurepip` 不可用）
 
 少數 Python 版本是精簡版，沒有 `ensurepip`，`venv` 也就沒有 `pip`。
 `start.py --setup` 會偵測並提示。此時用 `tools/` 裡的腳本，**完全不需要 pip**：
@@ -899,7 +871,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 > 每個 Python 版本請各自準備一份 `.pylibs`，或直接用 venv。
 > `run_app.bat` 會自動配對：有 `.venv` 就只跑 venv，不會再疊上 `.pylibs`。
 
-### 8.3 驗證安裝是否正確
+### 6.3 驗證安裝是否正確
 
 ```bash
 python -m pytest                     # 應該 525 passed
