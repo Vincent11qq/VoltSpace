@@ -3,8 +3,8 @@
 VoltSpace 是 Group 9 的租屋用電管理 App。這個目錄現在是**整套可以一鍵執行的系統**：
 
 - **後端計算核心（Member C，喬元震）** — 用電量、電費、負載、節電建議、情境模擬。
-- **前端（Member A）** — 原本的 Flet 原型，已修好並改成呼叫後端計算。
-- **資料庫（Member B）** — 原始 Supabase SQL 的 contract 問題已修正；
+- **前端（Member A，郭潼）** — 原本的 Flet 原型，已修好並改成呼叫後端計算。
+- **資料庫（Member B，呂婉菲）** — 原始 Supabase SQL 的 contract 問題已修正；
   另附本地 SQLite，讓 App 不需要雲端帳號就能跑。
 
 ## 一鍵啟動
