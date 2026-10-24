@@ -1,0 +1,369 @@
+{
+  "schema_version": "1.0",
+  "notes": [
+    "Reference nameplate power and typical usage for appliances common in NTHU",
+    "off-campus rented rooms. VoltSpace uses this table to (1) sanity-check a user's",
+    "input, (2) give a rule-based recommendation when a value looks high, and",
+    "(3) suggest a more efficient alternative so Member A can run a what-if scenario.",
+    "Values are typical ranges collected for a student project, not vendor specs.",
+    "Member B can store this same table in PostgreSQL later; the JSON stays the source",
+    "of truth for the calculation modules so they remain database-independent."
+  ],
+  "defaults": {
+    "voltage_v": 110,
+    "days_per_month": 30,
+    "power_factor": 1.0
+  },
+  "appliances": [
+    {
+      "key": "air_conditioner",
+      "name_en": "Air conditioner",
+      "name_zh": "冷氣機",
+      "category": "cooling",
+      "typical_power_watts": 900,
+      "power_range_watts": [700, 2200],
+      "voltage_v": 220,
+      "typical_hours_per_day": 6,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "變頻一級能效機種比定頻機種省電約 30-50%，並建議設定 26-28 度搭配電扇。",
+      "efficient_alternative": {
+        "label_zh": "一級能效變頻冷氣",
+        "power_watts": 700,
+        "note_zh": "以相同使用時數估算，較高耗能的舊機種可明顯降低用電量。"
+      },
+      "rules": [
+        {
+          "id": "ac_hours_high",
+          "when": { "hours_per_day_gte": 8 },
+          "title_zh": "冷氣每日使用超過 8 小時",
+          "reason_zh": "冷氣是租屋處最常見的高耗電來源，每多吹 1 小時，月用電量就會線性增加。",
+          "suggestion_zh": "設定 26-28 度並搭配電風扇或循環扇，睡前使用定時功能，可減少 1-2 小時運轉。",
+          "reduction_ratio": 0.2,
+          "reduction_cap_hours": 2.0,
+          "priority": 1,
+          "severity": "high"
+        },
+        {
+          "id": "ac_power_high",
+          "when": { "power_ratio_gte": 1.3 },
+          "title_zh": "冷氣額定功率高於一般值",
+          "reason_zh": "使用者輸入的功率明顯高於同類常見機種，可能是舊型定頻機或較大噸數機種。",
+          "suggestion_zh": "汰換為一級能效變頻機種，或縮小使用範圍、加強門窗隔熱與遮光。",
+          "reduction_ratio": 0.3,
+          "priority": 1,
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "key": "refrigerator",
+      "name_en": "Refrigerator",
+      "name_zh": "冰箱",
+      "category": "cooling",
+      "typical_power_watts": 130,
+      "power_range_watts": [80, 300],
+      "voltage_v": 110,
+      "typical_hours_per_day": 24,
+      "typical_days_per_month": 30,
+      "is_high_power": false,
+      "always_on": true,
+      "efficiency_note_zh": "冰箱全年 24 小時運轉，是「穩定但持續」的耗電來源，老舊機種壓縮機效率差。",
+      "efficient_alternative": {
+        "label_zh": "一級能效變頻冰箱",
+        "power_watts": 90,
+        "note_zh": "變頻壓縮機可依負載調整轉速，較定頻機種省電。"
+      },
+      "rules": [
+        {
+          "id": "fridge_always_on",
+          "when": { "is_always_on": true },
+          "title_zh": "冰箱為 24 小時運轉電器",
+          "reason_zh": "每日 24 小時、每月 30 天的運轉時間讓冰箱即使功率不高，月用電量仍容易進入前幾名。",
+          "suggestion_zh": "設定冷藏 5-7 度、冷凍 -18 度，避免塞滿影響對流，並與牆面保持 5 公分以上散熱距離。",
+          "reduction_ratio": 0.1,
+          "priority": 2,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "key": "electric_water_heater",
+      "name_en": "Electric water heater",
+      "name_zh": "電熱水器",
+      "category": "heating",
+      "typical_power_watts": 4000,
+      "power_range_watts": [2000, 8800],
+      "voltage_v": 220,
+      "typical_hours_per_day": 1,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "儲熱式電熱水器保溫會持續耗電，瞬熱式則瞬間功率極高，兩者都容易造成迴路負載偏高。",
+      "efficient_alternative": {
+        "label_zh": "變頻熱泵熱水器",
+        "power_watts": 900,
+        "note_zh": "熱泵效率（COP）遠高於電阻式加熱，但設備成本較高。"
+      },
+      "rules": [
+        {
+          "id": "water_heater_high_power",
+          "when": { "is_high_power": true },
+          "title_zh": "電熱水器功率極高，注意迴路負載",
+          "reason_zh": "電熱水器功率常達 4000W 以上，單一電器就可能接近 110V/15A 迴路的上限。",
+          "suggestion_zh": "使用時避免同時開啟其他高功率電器，並確認是否為 220V 專用迴路。",
+          "reduction_ratio": 0.15,
+          "priority": 1,
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "key": "hair_dryer",
+      "name_en": "Hair dryer",
+      "name_zh": "吹風機",
+      "category": "heating",
+      "typical_power_watts": 1200,
+      "power_range_watts": [800, 1600],
+      "voltage_v": 110,
+      "typical_hours_per_day": 0.25,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "吹風機使用時間短，總用電量通常不高，但瞬間電流大，是最常見的跳電元凶。",
+      "efficient_alternative": {
+        "label_zh": "低功率／負離子吹風機",
+        "power_watts": 1000,
+        "note_zh": "降低瓦數可減少瞬時負載，但乾髮時間可能變長。"
+      },
+      "rules": [
+        {
+          "id": "hair_dryer_load",
+          "when": { "is_high_power": true },
+          "title_zh": "吹風機是瞬間高負載電器",
+          "reason_zh": "吹風機功率約 1000-1500W，在 110V 下電流約 9-14A，很容易與其他電器同時使用時超過迴路上限。",
+          "suggestion_zh": "使用吹風機時先關閉電暖器、電鍋或微波爐，並避免使用老舊延長線。",
+          "reduction_ratio": 0.0,
+          "priority": 2,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "key": "washing_machine",
+      "name_en": "Washing machine",
+      "name_zh": "洗衣機",
+      "category": "laundry",
+      "typical_power_watts": 500,
+      "power_range_watts": [300, 1000],
+      "voltage_v": 110,
+      "typical_hours_per_day": 0.5,
+      "typical_days_per_month": 12,
+      "is_high_power": false,
+      "always_on": false,
+      "efficiency_note_zh": "洗衣機主要耗電來自加熱功能；改用冷水洗滌可大幅降低用電。",
+      "efficient_alternative": {
+        "label_zh": "變頻直立／滾筒洗衣機",
+        "power_watts": 350,
+        "note_zh": "變頻馬達在脫水與低速運轉時較省電。"
+      },
+      "rules": [
+        {
+          "id": "washer_days_high",
+          "when": { "days_per_month_gte": 20 },
+          "title_zh": "洗衣頻率高",
+          "reason_zh": "洗衣次數多會累積用電量，若使用熱水洗滌耗電更明顯。",
+          "suggestion_zh": "集中衣物一次洗、使用冷水洗程並縮短脫水時間。",
+          "reduction_ratio": 0.15,
+          "priority": 3,
+          "severity": "low"
+        }
+      ]
+    },
+    {
+      "key": "desktop_computer",
+      "name_en": "Desktop computer",
+      "name_zh": "桌上型電腦",
+      "category": "electronics",
+      "typical_power_watts": 250,
+      "power_range_watts": [120, 600],
+      "voltage_v": 110,
+      "typical_hours_per_day": 6,
+      "typical_days_per_month": 30,
+      "is_high_power": false,
+      "always_on": false,
+      "efficiency_note_zh": "含獨立顯卡或高瓦數電源的桌機在遊戲或運算時耗電明顯上升。",
+      "efficient_alternative": {
+        "label_zh": "筆記型電腦",
+        "power_watts": 65,
+        "note_zh": "同等工作時間下，筆電耗電通常僅為桌機的 1/3 至 1/4。"
+      },
+      "rules": [
+        {
+          "id": "pc_hours_high",
+          "when": { "hours_per_day_gte": 8 },
+          "title_zh": "電腦使用時間長",
+          "reason_zh": "長時間開機（含待機）會累積可觀用電，睡眠模式仍會消耗少量電力。",
+          "suggestion_zh": "開啟睡眠／休眠設定，離開超過 15 分鐘即自動休眠，並關閉不必要的周邊設備電源。",
+          "reduction_ratio": 0.15,
+          "priority": 3,
+          "severity": "low"
+        }
+      ]
+    },
+    {
+      "key": "electric_fan",
+      "name_en": "Electric fan",
+      "name_zh": "電風扇",
+      "category": "cooling",
+      "typical_power_watts": 45,
+      "power_range_watts": [15, 80],
+      "voltage_v": 110,
+      "typical_hours_per_day": 8,
+      "typical_days_per_month": 30,
+      "is_high_power": false,
+      "always_on": false,
+      "efficiency_note_zh": "電扇功率低，搭配冷氣使用可在不增加太多用電下提升舒適度。",
+      "efficient_alternative": {
+        "label_zh": "DC 直流電扇",
+        "power_watts": 20,
+        "note_zh": "DC 馬達較 AC 馬達省電，低速運轉時更明顯。"
+      },
+      "rules": []
+    },
+    {
+      "key": "lighting",
+      "name_en": "Lighting",
+      "name_zh": "照明",
+      "category": "lighting",
+      "typical_power_watts": 20,
+      "power_range_watts": [5, 100],
+      "voltage_v": 110,
+      "typical_hours_per_day": 6,
+      "typical_days_per_month": 30,
+      "is_high_power": false,
+      "always_on": false,
+      "efficiency_note_zh": "LED 燈泡較傳統白熾燈省電約 80%，是投資回收最快的節電方式之一。",
+      "efficient_alternative": {
+        "label_zh": "LED 燈具",
+        "power_watts": 10,
+        "note_zh": "以相同亮度比較，LED 瓦數遠低於白熾燈或傳統日光燈。"
+      },
+      "rules": [
+        {
+          "id": "lighting_long_hours",
+          "when": { "hours_per_day_gte": 10 },
+          "title_zh": "照明時間偏長",
+          "reason_zh": "照明時間長時，燈具效率對總用電量的影響會被放大。",
+          "suggestion_zh": "改用 LED 燈泡並養成離開房間隨手關燈的習慣。",
+          "reduction_ratio": 0.2,
+          "priority": 4,
+          "severity": "low"
+        }
+      ]
+    },
+    {
+      "key": "rice_cooker",
+      "name_en": "Rice cooker / electric pot",
+      "name_zh": "電子鍋／電鍋",
+      "category": "kitchen",
+      "typical_power_watts": 700,
+      "power_range_watts": [400, 1200],
+      "voltage_v": 110,
+      "typical_hours_per_day": 0.5,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "電鍋保溫功能會持續耗電，長時間保溫不經濟。",
+      "efficient_alternative": {
+        "label_zh": "有節能標章的電子鍋",
+        "power_watts": 600,
+        "note_zh": "保溫效率較佳，並可縮短保溫時間。"
+      },
+      "rules": [
+        {
+          "id": "cooker_hours_high",
+          "when": { "hours_per_day_gte": 3 },
+          "title_zh": "電鍋長時間使用（含保溫）",
+          "reason_zh": "保溫雖然功率較低，但長時間累積的用電量可能超過實際加熱。",
+          "suggestion_zh": "煮好後盡快食用或改用保溫瓶，減少長時間保溫。",
+          "reduction_ratio": 0.25,
+          "priority": 2,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "key": "microwave",
+      "name_en": "Microwave oven",
+      "name_zh": "微波爐",
+      "category": "kitchen",
+      "typical_power_watts": 1100,
+      "power_range_watts": [700, 1500],
+      "voltage_v": 110,
+      "typical_hours_per_day": 0.2,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "微波爐加熱效率高、時間短，總用電量通常低於電鍋。",
+      "efficient_alternative": {
+        "label_zh": "高效率微波爐",
+        "power_watts": 900,
+        "note_zh": "加熱效率高可縮短運轉時間。"
+      },
+      "rules": []
+    },
+    {
+      "key": "tv",
+      "name_en": "Television",
+      "name_zh": "電視",
+      "category": "electronics",
+      "typical_power_watts": 100,
+      "power_range_watts": [50, 250],
+      "voltage_v": 110,
+      "typical_hours_per_day": 3,
+      "typical_days_per_month": 30,
+      "is_high_power": false,
+      "always_on": false,
+      "efficiency_note_zh": "電視待機功率低但仍持續消耗，長時間不使用建議關閉電源。",
+      "efficient_alternative": {
+        "label_zh": "一級能效液晶電視",
+        "power_watts": 70,
+        "note_zh": "新機種面板效率較佳，待機功率也更低。"
+      },
+      "rules": []
+    },
+    {
+      "key": "electric_heater",
+      "name_en": "Electric space heater",
+      "name_zh": "電暖器",
+      "category": "heating",
+      "typical_power_watts": 1200,
+      "power_range_watts": [600, 1500],
+      "voltage_v": 110,
+      "typical_hours_per_day": 3,
+      "typical_days_per_month": 30,
+      "is_high_power": true,
+      "always_on": false,
+      "efficiency_note_zh": "電暖器屬於電阻式加熱，1W 電力最多產生 1W 熱能，效率無法再提升，只能減少使用時間。",
+      "efficient_alternative": {
+        "label_zh": "變頻冷暖氣機（暖氣模式）",
+        "power_watts": 800,
+        "note_zh": "熱泵效率大於 1，同樣熱量下用電量通常低於電暖器。"
+      },
+      "rules": [
+        {
+          "id": "heater_high_power",
+          "when": { "is_high_power": true },
+          "title_zh": "電暖器為高功率電阻式加熱",
+          "reason_zh": "電暖器功率高且效率已達理論上限，只能靠減少使用時間節電。",
+          "suggestion_zh": "改用冷暖氣機暖氣模式，或以衣物、地墊保暖並縮小加熱空間。",
+          "reduction_ratio": 0.35,
+          "priority": 1,
+          "severity": "high"
+        }
+      ]
+    }
+  ]
+}

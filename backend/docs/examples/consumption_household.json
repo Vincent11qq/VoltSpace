@@ -1,0 +1,99 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/consumption",
+    "body": {
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900,
+          "hours_per_day": 9,
+          "days_per_month": 30,
+          "voltage": 220
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130,
+          "hours_per_day": 24,
+          "days_per_month": 30,
+          "voltage": 110
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250,
+          "hours_per_day": 6,
+          "days_per_month": 30,
+          "voltage": 110
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "response": {
+    "count": 3,
+    "total_daily_kwh": 12.72,
+    "total_monthly_kwh": 381.6,
+    "average_monthly_kwh_per_appliance": 127.2,
+    "highest_consumption_appliance": "冷氣機",
+    "appliances": [
+      {
+        "appliance_id": "a1",
+        "name": "冷氣機",
+        "category": "cooling",
+        "power_watts": 900.0,
+        "hours_per_day": 9.0,
+        "days_per_month": 30,
+        "quantity": 1,
+        "daily_kwh": 8.1,
+        "monthly_kwh": 243.0,
+        "share_of_total_percent": 63.68,
+        "replacement_label": null,
+        "replaced_from": null,
+        "warnings": []
+      },
+      {
+        "appliance_id": "a2",
+        "name": "冰箱",
+        "category": "cooling",
+        "power_watts": 130.0,
+        "hours_per_day": 24.0,
+        "days_per_month": 30,
+        "quantity": 1,
+        "daily_kwh": 3.12,
+        "monthly_kwh": 93.6,
+        "share_of_total_percent": 24.53,
+        "replacement_label": null,
+        "replaced_from": null,
+        "warnings": [
+          {
+            "code": "near_continuous_use",
+            "field": "hours_per_day",
+            "message_zh": "每日 24 小時幾乎是全天運轉，建議再用負載估算確認用電安全。",
+            "message_en": "24 hours/day means this appliance runs almost continuously; use the load estimate to confirm it is safe."
+          }
+        ]
+      },
+      {
+        "appliance_id": "a3",
+        "name": "桌上型電腦",
+        "category": "electronics",
+        "power_watts": 250.0,
+        "hours_per_day": 6.0,
+        "days_per_month": 30,
+        "quantity": 1,
+        "daily_kwh": 1.5,
+        "monthly_kwh": 45.0,
+        "share_of_total_percent": 11.79,
+        "replacement_label": null,
+        "replaced_from": null,
+        "warnings": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+# VoltSpace — optional desktop UI (Flet)
+#
+# The web UI needs NONE of this: it is plain HTML/CSS/JS served by the backend at `/`.
+# Install these only if you want the native desktop window (`run_app.bat --flet`).
+#
+# Flet 1.0 renamed most of the 0.x API. `desktop/app.py` has been migrated to 1.0
+# (ft.Icons, ft.Alignment, ft.Button, ft.Container(shadow=...), ft.run(main)).
+
+flet==1.0.5
+# Flet's *web* mode additionally needs this package; the desktop (FLET_APP) window does
+# not. It is a ~27 MB wheel because it bundles the Flutter web assets.
+# flet-web==1.0.5

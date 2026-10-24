@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/cost",
+    "body": {
+      "consumption_kwh": 381.6,
+      "plan_id": "flat_rate_resell_reference"
+    }
+  },
+  "status": 200,
+  "response": {
+    "plan_id": "flat_rate_resell_reference",
+    "plan_name_en": "Flat-rate reference (typical rented-room resale price)",
+    "plan_name_zh": "單一費率參考（租屋常見房東轉售價）",
+    "plan_type": "flat",
+    "season": "non_summer",
+    "season_label_en": "Non-summer (Oct 1 - May 31)",
+    "season_label_zh": "非夏月（10月1日至5月31日）",
+    "billing_months": 1,
+    "consumption_kwh": 381.6,
+    "total_amount": 2098.8,
+    "total_amount_rounded": 2099,
+    "currency": "TWD",
+    "effective_rate_per_kwh": 5.5,
+    "lines": [
+      {
+        "tier_index": 1,
+        "label_zh": "單一費率",
+        "range_from_kwh": 0.0,
+        "range_to_kwh": null,
+        "rate_per_kwh": 5.5,
+        "kwh_in_tier": 381.6,
+        "amount": 2098.8
+      }
+    ],
+    "warnings": [
+      {
+        "code": "landlord_resale_rate",
+        "message_zh": "這是房東的單一費率轉售價，不是台電的累進級距。租屋常見行情約 5.0-6.5 元/度，通常高於台電住宅累進電價。",
+        "message_en": "This is a flat per-kWh resale price, not a Taipower tier. Landlords of rented rooms usually charge 5.0-6.5 TWD/kWh, which is normally more expensive than the progressive Taipower rate."
+      },
+      {
+        "code": "estimate_only",
+        "message_zh": "此為依 VoltSpace 電價表計算的估算值。實際帳單還包含計費期間、分攤方式，以及房東可能採用的轉售費率。",
+        "message_en": "This is an estimate based on the VoltSpace tariff table. The real bill also includes metering, proration and possibly a landlord's resale price."
+      }
+    ],
+    "is_estimate": true,
+    "consumption_source": "input_kwh",
+    "computed_total_monthly_kwh": null
+  }
+}

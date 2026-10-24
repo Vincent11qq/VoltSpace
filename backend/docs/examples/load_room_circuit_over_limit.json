@@ -1,0 +1,119 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/load",
+    "body": {
+      "appliances": [
+        {
+          "name": "吹風機",
+          "power_watts": 1200,
+          "hours_per_day": 0.3,
+          "voltage": 110
+        },
+        {
+          "name": "電暖器",
+          "power_watts": 1200,
+          "hours_per_day": 3,
+          "voltage": 110
+        }
+      ],
+      "voltage": 110,
+      "load_limit_amps": 15,
+      "breaker_amps": 20,
+      "circuit_label": "房間插座迴路",
+      "include_overload_combinations": true
+    }
+  },
+  "status": 200,
+  "response": {
+    "circuit_label": "房間插座迴路",
+    "voltage_used": 110.0,
+    "phases": 1,
+    "appliance_count": 2,
+    "total_power_watts": 2400.0,
+    "total_apparent_power_va": 2400.0,
+    "estimated_total_current_amps": 21.8182,
+    "limit_amps": 15.0,
+    "breaker_amps": 20.0,
+    "safety_margin": 0.8,
+    "recommended_max_current_amps": 12.0,
+    "usage_percent_of_limit": 145.45,
+    "verdict": "over_limit",
+    "severity": "danger",
+    "verdict_message_zh": "估算總電流 21.82A 已超過上限 15.00A，請勿同時開啟這些電器，並請專業電工檢查迴路。",
+    "highest_current_appliance": {
+      "name": "吹風機",
+      "current_amps": 10.9091
+    },
+    "appliances": [
+      {
+        "appliance_id": null,
+        "name": "吹風機",
+        "power_watts": 1200.0,
+        "voltage": 110.0,
+        "power_factor": 1.0,
+        "quantity": 1,
+        "current_amps": 10.9091,
+        "apparent_power_va": 1200.0,
+        "warnings": []
+      },
+      {
+        "appliance_id": null,
+        "name": "電暖器",
+        "power_watts": 1200.0,
+        "voltage": 110.0,
+        "power_factor": 1.0,
+        "quantity": 1,
+        "current_amps": 10.9091,
+        "apparent_power_va": 1200.0,
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "disclaimer",
+        "severity": "info",
+        "message_zh": "本估算僅供初步參考，無法保證電路安全；實際配線、斷路器與插座規格需由專業電工確認。",
+        "message_en": "Preliminary estimate only. It does not guarantee circuit safety; a qualified electrician must verify wiring, breakers and sockets."
+      },
+      {
+        "code": "running_current_only",
+        "severity": "info",
+        "message_zh": "此估算為運轉電流，未包含馬達或壓縮機的啟動電流（啟動電流可能高出數倍）。",
+        "message_en": "This is running current only; motor/compressor inrush current is not modelled and can be several times higher."
+      },
+      {
+        "code": "over_limit",
+        "severity": "danger",
+        "message_zh": "估算總電流 21.82A 已超過上限 15.00A，請勿同時開啟這些電器，並請專業電工檢查迴路。",
+        "message_en": "Estimated total current exceeds the stated limit.",
+        "total_current_amps": 21.8182,
+        "limit_amps": 15.0,
+        "usage_percent": 145.45
+      },
+      {
+        "code": "socket_vs_breaker",
+        "severity": "info",
+        "message_zh": "插座/迴路上限 15A 低於斷路器額定 20A。斷路器保護的是電線，不會保護插座與延長線，請以較小的數值作為同時用電的依據。",
+        "message_en": "The socket/circuit limit (15A) is lower than the breaker rating (20A). A breaker protects the wiring, not the socket or an extension lead, so use the smaller value as the practical limit."
+      }
+    ],
+    "disclaimer_zh": "本工具僅提供初步負載估算，不構成電路安全保證，也不能取代專業電工的現場檢查。",
+    "disclaimer_en": "This tool provides a preliminary load estimate only. It is not a guarantee of electrical safety and does not replace an on-site inspection by a qualified electrician.",
+    "overload_combinations": {
+      "load_limit_amps": 15.0,
+      "combination_size": 2,
+      "combinations": [
+        {
+          "appliances": [
+            "吹風機",
+            "電暖器"
+          ],
+          "total_current_amps": 21.8182,
+          "over_by_amps": 6.8182
+        }
+      ],
+      "message_zh": "以下電器組合的估算電流會超過上限，請避免同時使用。"
+    }
+  }
+}

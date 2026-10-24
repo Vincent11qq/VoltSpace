@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/consumption",
+    "body": {
+      "appliances": [
+        {
+          "name": "冷氣機",
+          "power_watts": 0,
+          "hours_per_day": 9
+        }
+      ]
+    }
+  },
+  "status": 422,
+  "response": {
+    "error": true,
+    "code": "validation_error",
+    "message": "Input should be greater than 0",
+    "field": "appliances.0.power_watts",
+    "details": [
+      {
+        "field": "appliances.0.power_watts",
+        "message": "Input should be greater than 0",
+        "type": "greater_than"
+      }
+    ]
+  }
+}

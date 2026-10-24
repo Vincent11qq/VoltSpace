@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Empty leftovers seen on Windows sandboxes when pytest could not create its cache
+# directory; harmless, and ``-p no:cacheprovider`` in pytest.ini prevents new ones.
+pytest-cache-files-*/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Virtual environments
+# Note: .pylibs is bound to ONE Python version (its compiled .pyd files); using a
+# .pylibs built for 3.12 with a 3.14 interpreter raises
+# "ImportError: cannot import name 'ArgsKwargs' from 'pydantic_core._pydantic_core'".
+.venv/
+.venv*/
+venv/
+
+# Offline install artefacts. Prefer, in order:
+#   1. pip install -r requirements.txt   (packages ship cp312 AND cp314 wheels)
+#   2. python tools/resolve_deps.py --dest .wheels <pkg>==<ver> ...
+#      python tools/install_wheels.py --src .wheels --dest .pylibs
+# See README section 8.
+.pylibs/
+.pylibs-*/
+.wheels/
+.wheels-*/
+
+# Local editor settings
+.vscode/
+.idea/
+*.swp
+
+# The app's own runtime data: the saved household. Not source.
+.data/
+.test-data/
+*.db
+*.db-wal
+*.db-shm
+
+# Never commit Supabase keys
+.env
+.env.local
+
+# Do NOT ignore docs/ - openapi.json and examples/*.json are deliverables used by
+# Member A (frontend) and for the presentation.

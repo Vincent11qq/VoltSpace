@@ -1,0 +1,67 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/load",
+    "body": {
+      "appliances": [
+        {
+          "name": "桌上型電腦",
+          "power_watts": 250,
+          "hours_per_day": 6
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "response": {
+    "circuit_label": null,
+    "voltage_used": 110.0,
+    "phases": 1,
+    "appliance_count": 1,
+    "total_power_watts": 250.0,
+    "total_apparent_power_va": 250.0,
+    "estimated_total_current_amps": 2.2727,
+    "limit_amps": null,
+    "breaker_amps": null,
+    "safety_margin": 0.8,
+    "recommended_max_current_amps": null,
+    "usage_percent_of_limit": null,
+    "verdict": "no_limit",
+    "severity": "info",
+    "verdict_message_zh": "未提供負載上限，僅提供電流估算結果，無法判斷是否接近上限。",
+    "highest_current_appliance": {
+      "name": "桌上型電腦",
+      "current_amps": 2.2727
+    },
+    "appliances": [
+      {
+        "appliance_id": null,
+        "name": "桌上型電腦",
+        "power_watts": 250.0,
+        "voltage": 110.0,
+        "power_factor": 1.0,
+        "quantity": 1,
+        "current_amps": 2.2727,
+        "apparent_power_va": 250.0,
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "disclaimer",
+        "severity": "info",
+        "message_zh": "本估算僅供初步參考，無法保證電路安全；實際配線、斷路器與插座規格需由專業電工確認。",
+        "message_en": "Preliminary estimate only. It does not guarantee circuit safety; a qualified electrician must verify wiring, breakers and sockets."
+      },
+      {
+        "code": "running_current_only",
+        "severity": "info",
+        "message_zh": "此估算為運轉電流，未包含馬達或壓縮機的啟動電流（啟動電流可能高出數倍）。",
+        "message_en": "This is running current only; motor/compressor inrush current is not modelled and can be several times higher."
+      }
+    ],
+    "disclaimer_zh": "本工具僅提供初步負載估算，不構成電路安全保證，也不能取代專業電工的現場檢查。",
+    "disclaimer_en": "This tool provides a preliminary load estimate only. It is not a guarantee of electrical safety and does not replace an on-site inspection by a qualified electrician.",
+    "overload_combinations": null
+  }
+}

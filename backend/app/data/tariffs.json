@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0",
+  "currency": "TWD",
+  "energy_unit": "kWh",
+  "updated_at": "2025-01-01",
+  "notes": [
+    "VoltSpace tariff data is kept separate from the calculation code so that a tariff",
+    "revision only requires editing this JSON file.",
+    "Tier prices and the summer window follow Taiwan Power Company (Taipower) published",
+    "residential (non-business, metered-light) rates that have applied since 2024-04-01.",
+    "The 2025 electricity price review committee decided to freeze residential rates.",
+    "Source: https://www.taipower.com.tw/ (Taipower electricity price tables)",
+    "       https://hc1.taipower.com.tw/1136/1149/2271/3119/normalPost",
+    "IMPORTANT: every price here is an ESTIMATE input, not a guarantee of the amount a",
+    "user will be billed. Landlords of rented rooms often resell electricity at a flat",
+    "rate (see flat_rate_resell_reference), so a real bill may differ from these tiers."
+  ],
+  "season_rules": {
+    "summer": {
+      "label_en": "Summer (Jun 1 - Sep 30)",
+      "label_zh": "夏月（6月1日至9月30日）",
+      "months": [6, 7, 8, 9]
+    },
+    "non_summer": {
+      "label_en": "Non-summer (Oct 1 - May 31)",
+      "label_zh": "非夏月（10月1日至5月31日）",
+      "months": [1, 2, 3, 4, 5, 10, 11, 12]
+    }
+  },
+  "default_plan_id": "tw_residential_tiered",
+  "plans": {
+    "tw_residential_tiered": {
+      "id": "tw_residential_tiered",
+      "name_en": "Taipower residential - progressive (tiered) rate",
+      "name_zh": "台電住宅用電－累進（級距）電價",
+      "type": "tiered",
+      "currency": "TWD",
+      "unit": "kWh",
+      "applicable_to": "Table-light non-business residential users (表燈非營業用)",
+      "effective_from": "2024-04-01",
+      "source": "Taipower residential electricity price table",
+      "threshold_semantics": "per_billing_period",
+      "supports_billing_months": true,
+      "progressive": true,
+      "seasons": {
+        "summer": {
+          "tiers": [
+            { "index": 1, "up_to_kwh": 120, "rate": 1.68, "label_zh": "120度以下部分" },
+            { "index": 2, "up_to_kwh": 330, "rate": 2.45, "label_zh": "121~330度部分" },
+            { "index": 3, "up_to_kwh": 500, "rate": 3.70, "label_zh": "331~500度部分" },
+            { "index": 4, "up_to_kwh": 700, "rate": 5.04, "label_zh": "501~700度部分" },
+            { "index": 5, "up_to_kwh": 1000, "rate": 6.24, "label_zh": "701~1000度部分" },
+            { "index": 6, "up_to_kwh": null, "rate": 8.46, "label_zh": "1001度以上部分" }
+          ]
+        },
+        "non_summer": {
+          "tiers": [
+            { "index": 1, "up_to_kwh": 120, "rate": 1.68, "label_zh": "120度以下部分" },
+            { "index": 2, "up_to_kwh": 330, "rate": 2.16, "label_zh": "121~330度部分" },
+            { "index": 3, "up_to_kwh": 500, "rate": 3.03, "label_zh": "331~500度部分" },
+            { "index": 4, "up_to_kwh": 700, "rate": 4.14, "label_zh": "501~700度部分" },
+            { "index": 5, "up_to_kwh": 1000, "rate": 5.07, "label_zh": "701~1000度部分" },
+            { "index": 6, "up_to_kwh": null, "rate": 6.63, "label_zh": "1001度以上部分" }
+          ]
+        }
+      }
+    },
+    "tw_residential_tou": {
+      "id": "tw_residential_tou",
+      "name_en": "Taipower residential - time-of-use (two-segment, estimated)",
+      "name_zh": "台電住宅用電－時間電價（二段式，估算）",
+      "type": "time_of_use",
+      "currency": "TWD",
+      "unit": "kWh",
+      "applicable_to": "Residential users who opted into a two-segment time-of-use contract",
+      "effective_from": "2024-04-01",
+      "source": "Taipower residential time-of-use electricity price table",
+      "is_estimate": true,
+      "estimate_note": "Time-of-use rates vary by contract capacity, season and peak/off-peak window; this simplified table is for education and comparison only.",
+      "segments": ["peak", "off_peak"],
+      "seasons": {
+        "summer": {
+          "peak": 5.16,
+          "off_peak": 2.13
+        },
+        "non_summer": {
+          "peak": 5.16,
+          "off_peak": 1.90
+        }
+      }
+    },
+    "flat_rate_resell_reference": {
+      "id": "flat_rate_resell_reference",
+      "name_en": "Flat-rate reference (typical rented-room resale price)",
+      "name_zh": "單一費率參考（租屋常見房東轉售價）",
+      "type": "flat",
+      "currency": "TWD",
+      "unit": "kWh",
+      "applicable_to": "Rented rooms where the landlord resells electricity at a flat per-kWh price",
+      "effective_from": "2025-01-01",
+      "source": "Common market practice for NTHU off-campus rented rooms",
+      "is_estimate": true,
+      "rate": 5.5,
+      "typical_range": [5.0, 6.5],
+      "seasons": {
+        "summer": { "rate": 5.5 },
+        "non_summer": { "rate": 5.5 }
+      }
+    }
+  }
+}

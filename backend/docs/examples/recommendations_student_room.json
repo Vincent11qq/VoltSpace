@@ -1,0 +1,267 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/recommendations",
+    "body": {
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900,
+          "hours_per_day": 9,
+          "days_per_month": 30,
+          "voltage": 220
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130,
+          "hours_per_day": 24,
+          "days_per_month": 30,
+          "voltage": 110
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250,
+          "hours_per_day": 6,
+          "days_per_month": 30,
+          "voltage": 110
+        }
+      ],
+      "month": 8,
+      "top_n": 3
+    }
+  },
+  "status": 200,
+  "response": {
+    "currency": "TWD",
+    "month": 8,
+    "plan_id": null,
+    "total_monthly_kwh": 381.6,
+    "blended_rate_per_kwh": 2.3769,
+    "top_consumers": [
+      {
+        "appliance": "冷氣機",
+        "monthly_kwh": 243.0,
+        "share_of_total_percent": 63.68
+      },
+      {
+        "appliance": "冰箱",
+        "monthly_kwh": 93.6,
+        "share_of_total_percent": 24.53
+      },
+      {
+        "appliance": "桌上型電腦",
+        "monthly_kwh": 45.0,
+        "share_of_total_percent": 11.79
+      }
+    ],
+    "high_consumption_threshold_percent": 20.0,
+    "recommendation_count": 7,
+    "total_potential_monthly_saving_kwh": 116.1,
+    "total_potential_monthly_saving_twd": 275.95,
+    "total_potential_annual_saving_twd": 3311.4,
+    "potential_saving_percent_of_usage": 30.42,
+    "comprehensive_monthly_saving_kwh": 224.55,
+    "comprehensive_monthly_saving_twd": 533.73,
+    "aggregation_note_zh": "total_potential_* 只計算每台家電最有效的一項建議（避免同一台家電重複計算）；comprehensive_* 則是所有建議都落實時的合計，數字會較大。",
+    "recommendations": [
+      {
+        "id": "ac_hours_high",
+        "recommendation_key": "ac_hours_high::a1",
+        "appliance": "冷氣機",
+        "appliance_key": "a1",
+        "title_zh": "冷氣每日使用超過 8 小時",
+        "reason_zh": "冷氣是租屋處最常見的高耗電來源，每多吹 1 小時，月用電量就會線性增加。",
+        "suggestion_zh": "設定 26-28 度並搭配電風扇或循環扇，睡前使用定時功能，可減少 1-2 小時運轉。",
+        "estimated_monthly_saving_kwh": 48.6,
+        "estimated_monthly_saving_twd": 115.52,
+        "estimated_annual_saving_twd": 1386.2,
+        "assumption_zh": "假設每日可減少 1.8 小時使用（原 9.0 小時），每月 30 天。",
+        "priority": 1,
+        "severity": "high",
+        "confidence": "medium",
+        "rule_id": "ac_hours_high",
+        "advice_only": null,
+        "is_purchase_advice": null,
+        "alternative_label_zh": null,
+        "alternative_power_watts": null,
+        "share_of_total_percent": null
+      },
+      {
+        "id": "top_consumer_0_冷氣機",
+        "recommendation_key": "top_consumer_0_冷氣機::a1",
+        "appliance": "冷氣機",
+        "appliance_key": "a1",
+        "title_zh": "冷氣機 是家中用電量最高的電器之一",
+        "reason_zh": "預估每月用電 243.0 度，占全家總用電 63.7%。優先改善這類電器，節電效果最明顯。",
+        "suggestion_zh": "縮短使用時間、改用高效率機種或調整使用時段（避開尖峰），只要能降低 15% 用電量就能看到明顯差距。",
+        "estimated_monthly_saving_kwh": 36.45,
+        "estimated_monthly_saving_twd": 86.64,
+        "estimated_annual_saving_twd": 1039.65,
+        "assumption_zh": "假設將此電器的用電量降低 15%（目前每月 243.0 度）。",
+        "priority": 1,
+        "severity": "high",
+        "confidence": "medium",
+        "rule_id": null,
+        "advice_only": null,
+        "is_purchase_advice": null,
+        "alternative_label_zh": null,
+        "alternative_power_watts": null,
+        "share_of_total_percent": 63.68
+      },
+      {
+        "id": "top_consumer_0_冰箱",
+        "recommendation_key": "top_consumer_0_冰箱::a2",
+        "appliance": "冰箱",
+        "appliance_key": "a2",
+        "title_zh": "冰箱 是家中用電量最高的電器之一",
+        "reason_zh": "預估每月用電 93.6 度，占全家總用電 24.5%。優先改善這類電器，節電效果最明顯。",
+        "suggestion_zh": "縮短使用時間、改用高效率機種或調整使用時段（避開尖峰），只要能降低 15% 用電量就能看到明顯差距。",
+        "estimated_monthly_saving_kwh": 14.04,
+        "estimated_monthly_saving_twd": 33.37,
+        "estimated_annual_saving_twd": 400.46,
+        "assumption_zh": "假設將此電器的用電量降低 15%（目前每月 93.6 度）。",
+        "priority": 1,
+        "severity": "high",
+        "confidence": "medium",
+        "rule_id": null,
+        "advice_only": null,
+        "is_purchase_advice": null,
+        "alternative_label_zh": null,
+        "alternative_power_watts": null,
+        "share_of_total_percent": 24.53
+      },
+      {
+        "id": "swap_air_conditioner",
+        "recommendation_key": "swap_air_conditioner::a1",
+        "appliance": "冷氣機",
+        "appliance_key": "a1",
+        "title_zh": "考慮更換為一級能效變頻冷氣",
+        "reason_zh": "目前 900W 的冷氣機每月約用 243.0 度；同類高效率機種約 700W。",
+        "suggestion_zh": "以相同使用時數估算，較高耗能的舊機種可明顯降低用電量。 若日後需要汰換，可優先選擇此類機種，新機價格需自行評估是否值得。",
+        "estimated_monthly_saving_kwh": 54.0,
+        "estimated_monthly_saving_twd": 128.35,
+        "estimated_annual_saving_twd": 1540.22,
+        "assumption_zh": "假設使用時數（每日 9 小時、每月 30 天）與目前完全相同，僅更換機種功率。",
+        "priority": 2,
+        "severity": "medium",
+        "confidence": "medium",
+        "rule_id": null,
+        "advice_only": null,
+        "is_purchase_advice": true,
+        "alternative_label_zh": "一級能效變頻冷氣",
+        "alternative_power_watts": 700.0,
+        "share_of_total_percent": null
+      },
+      {
+        "id": "swap_desktop_computer",
+        "recommendation_key": "swap_desktop_computer::a3",
+        "appliance": "桌上型電腦",
+        "appliance_key": "a3",
+        "title_zh": "考慮更換為筆記型電腦",
+        "reason_zh": "目前 250W 的桌上型電腦每月約用 45.0 度；同類高效率機種約 65W。",
+        "suggestion_zh": "同等工作時間下，筆電耗電通常僅為桌機的 1/3 至 1/4。 若日後需要汰換，可優先選擇此類機種，新機價格需自行評估是否值得。",
+        "estimated_monthly_saving_kwh": 33.3,
+        "estimated_monthly_saving_twd": 79.15,
+        "estimated_annual_saving_twd": 949.8,
+        "assumption_zh": "假設使用時數（每日 6 小時、每月 30 天）與目前完全相同，僅更換機種功率。",
+        "priority": 2,
+        "severity": "medium",
+        "confidence": "medium",
+        "rule_id": null,
+        "advice_only": null,
+        "is_purchase_advice": true,
+        "alternative_label_zh": "筆記型電腦",
+        "alternative_power_watts": 65.0,
+        "share_of_total_percent": null
+      },
+      {
+        "id": "swap_refrigerator",
+        "recommendation_key": "swap_refrigerator::a2",
+        "appliance": "冰箱",
+        "appliance_key": "a2",
+        "title_zh": "考慮更換為一級能效變頻冰箱",
+        "reason_zh": "目前 130W 的冰箱每月約用 93.6 度；同類高效率機種約 90W。",
+        "suggestion_zh": "變頻壓縮機可依負載調整轉速，較定頻機種省電。 若日後需要汰換，可優先選擇此類機種，新機價格需自行評估是否值得。",
+        "estimated_monthly_saving_kwh": 28.8,
+        "estimated_monthly_saving_twd": 68.45,
+        "estimated_annual_saving_twd": 821.45,
+        "assumption_zh": "假設使用時數（每日 24 小時、每月 30 天）與目前完全相同，僅更換機種功率。",
+        "priority": 2,
+        "severity": "medium",
+        "confidence": "medium",
+        "rule_id": null,
+        "advice_only": null,
+        "is_purchase_advice": true,
+        "alternative_label_zh": "一級能效變頻冰箱",
+        "alternative_power_watts": 90.0,
+        "share_of_total_percent": null
+      },
+      {
+        "id": "fridge_always_on",
+        "recommendation_key": "fridge_always_on::a2",
+        "appliance": "冰箱",
+        "appliance_key": "a2",
+        "title_zh": "冰箱為 24 小時運轉電器",
+        "reason_zh": "每日 24 小時、每月 30 天的運轉時間讓冰箱即使功率不高，月用電量仍容易進入前幾名。",
+        "suggestion_zh": "設定冷藏 5-7 度、冷凍 -18 度，避免塞滿影響對流，並與牆面保持 5 公分以上散熱距離。",
+        "estimated_monthly_saving_kwh": 9.36,
+        "estimated_monthly_saving_twd": 22.25,
+        "estimated_annual_saving_twd": 266.97,
+        "assumption_zh": "假設可降低該電器 10% 的用電量（以目前每月 93.6 度為基準）。",
+        "priority": 2,
+        "severity": "medium",
+        "confidence": "medium",
+        "rule_id": "fridge_always_on",
+        "advice_only": null,
+        "is_purchase_advice": null,
+        "alternative_label_zh": null,
+        "alternative_power_watts": null,
+        "share_of_total_percent": null
+      }
+    ],
+    "per_appliance": [
+      {
+        "appliance": "冷氣機",
+        "appliance_key": "a1",
+        "monthly_kwh": 243.0,
+        "share_of_total_percent": 63.68,
+        "matched_catalog_key": "air_conditioner",
+        "recommendation_count": 3,
+        "input_warnings": []
+      },
+      {
+        "appliance": "冰箱",
+        "appliance_key": "a2",
+        "monthly_kwh": 93.6,
+        "share_of_total_percent": 24.53,
+        "matched_catalog_key": "refrigerator",
+        "recommendation_count": 3,
+        "input_warnings": [
+          {
+            "code": "near_continuous_use",
+            "field": "hours_per_day",
+            "message_zh": "每日 24 小時幾乎是全天運轉，建議再用負載估算確認用電安全。",
+            "message_en": "24 hours/day means this appliance runs almost continuously; use the load estimate to confirm it is safe."
+          }
+        ]
+      },
+      {
+        "appliance": "桌上型電腦",
+        "appliance_key": "a3",
+        "monthly_kwh": 45.0,
+        "share_of_total_percent": 11.79,
+        "matched_catalog_key": "desktop_computer",
+        "recommendation_count": 1,
+        "input_warnings": []
+      }
+    ],
+    "disclaimer_zh": "以上節電量與金額皆為規則式估算，實際節省效果會因機種、環境與使用習慣而不同，不保證可達成相同金額。",
+    "disclaimer_en": "All savings are rule-based estimates. Actual savings depend on the appliance model, environment and habits, and are not guaranteed."
+  }
+}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VoltSpace — 租屋用電與迴路安全</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+<link rel="stylesheet" href="/app/app.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ header ============ -->
+  <header class="card header">
+    <div class="brand">
+      <span class="bolt">⚡</span>
+      <div>
+        <h1>VoltSpace</h1>
+        <p class="muted small">租屋用電估算與迴路安全檢查</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <label class="field inline">
+        <span class="label">電價方案</span>
+        <select id="plan"></select>
+      </label>
+      <label class="field inline">
+        <span class="label">月份</span>
+        <select id="month"></select>
+      </label>
+      <span id="conn" class="pill" title="後端連線狀態">連線中…</span>
+    </div>
+  </header>
+
+  <!-- ============ body ============ -->
+  <main class="layout">
+
+    <!-- left: appliance library -->
+    <section class="card drawer">
+      <h2>家電庫</h2>
+      <p class="muted small">點選即可加入，數字來自後端參考資料。</p>
+      <div id="presets" class="preset-list"></div>
+      <button id="customToggle" class="ghost-btn">＋ 自訂家電</button>
+      <form id="customForm" class="custom-form" hidden>
+        <input id="cName" placeholder="名稱（例如 除濕機）" required maxlength="80" />
+        <div class="row2">
+          <input id="cWatts" type="number" placeholder="功率 W" min="0.1" max="100000" step="1" required />
+          <input id="cVolts" type="number" placeholder="電壓 V" value="110" min="1" max="1000" step="1" />
+        </div>
+        <div class="row2">
+          <input id="cHours" type="number" placeholder="每日小時" min="0" max="24" step="0.1" required />
+          <input id="cDays" type="number" placeholder="每月天數" value="30" min="0" max="31" step="1" />
+        </div>
+        <input id="cQty" type="number" placeholder="數量" value="1" min="1" max="999" step="1" />
+        <div class="row2">
+          <button type="submit" class="primary">加入</button>
+          <button type="button" id="customCancel" class="ghost-btn">取消</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- centre: the socket -->
+    <section class="centre">
+      <h2 class="centre-title">主要迴路插座</h2>
+
+      <div id="outlet" class="card outlet">
+        <div class="outlet-icon">⏻</div>
+        <div id="status" class="status">—</div>
+        <div id="watts" class="watts">0 W</div>
+        <div id="amps" class="muted small">0 A</div>
+        <div class="bar"><div id="bar" class="bar-fill"></div></div>
+        <div id="cost" class="cost">—</div>
+
+        <div class="plugged-label">已接上的電器</div>
+        <ul id="plugged" class="plugged"></ul>
+      </div>
+
+      <div class="card circuit">
+        <div class="circuit-row">
+          <label class="field">
+            <span class="label">迴路上限</span>
+            <select id="circuit"></select>
+          </label>
+          <label class="field">
+            <span class="label">自訂上限 (A)</span>
+            <input id="ampsLimit" type="number" min="0.1" max="1000" step="0.1" />
+          </label>
+          <label class="field">
+            <span class="label">安全裕度</span>
+            <select id="margin">
+              <option value="0.8">80%（建議）</option>
+              <option value="0.7">70%（保守）</option>
+              <option value="1.0">100%（只看是否超限）</option>
+            </select>
+          </label>
+        </div>
+        <div class="row-actions">
+          <button id="saveAll" class="primary">儲存我的家電</button>
+          <button id="reload" class="ghost-btn">重新載入已存清單</button>
+          <button id="clearAll" class="danger-btn">全部清除</button>
+        </div>
+        <p id="saveNote" class="muted small"></p>
+      </div>
+    </section>
+
+    <!-- right: results -->
+    <section class="results">
+      <div class="card">
+        <h2>本月估算</h2>
+        <dl class="stats">
+          <div><dt>每月用電</dt><dd id="sKwh">—</dd></div>
+          <div><dt>預估電費</dt><dd id="sCost">—</dd></div>
+          <div><dt>平均每度</dt><dd id="sRate">—</dd></div>
+          <div><dt>季節</dt><dd id="sSeason">—</dd></div>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h2>用電等級</h2>
+        <ul id="breakdown" class="breakdown"></ul>
+      </div>
+
+      <div class="card">
+        <h2>節電建議</h2>
+        <p id="saving" class="muted small"></p>
+        <ul id="recs" class="recs"></ul>
+      </div>
+
+      <details class="card notes">
+        <summary>計算假設與限制</summary>
+        <ul id="disclaimer" class="small muted"></ul>
+      </details>
+    </section>
+  </main>
+
+  <footer class="muted small centre-title">
+    VoltSpace · Group 9 · 計算與電價皆由後端提供，
+    <a href="/docs" target="_blank" rel="noreferrer">API 文件</a>
+  </footer>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/app/app.js"></script>
+</body>
+</html>

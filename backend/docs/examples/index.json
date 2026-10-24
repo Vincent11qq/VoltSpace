@@ -1,0 +1,67 @@
+[
+  {
+    "name": "consumption_single",
+    "path": "/calculate/consumption",
+    "status": 200
+  },
+  {
+    "name": "consumption_household",
+    "path": "/calculate/consumption",
+    "status": 200
+  },
+  {
+    "name": "cost_summer_tiered",
+    "path": "/calculate/cost",
+    "status": 200
+  },
+  {
+    "name": "cost_two_month_bill",
+    "path": "/calculate/cost",
+    "status": 200
+  },
+  {
+    "name": "cost_landlord_flat_rate",
+    "path": "/calculate/cost",
+    "status": 200
+  },
+  {
+    "name": "cost_from_appliance_list",
+    "path": "/calculate/cost",
+    "status": 200
+  },
+  {
+    "name": "load_room_circuit_over_limit",
+    "path": "/calculate/load",
+    "status": 200
+  },
+  {
+    "name": "load_safe_without_limit",
+    "path": "/calculate/load",
+    "status": 200
+  },
+  {
+    "name": "recommendations_student_room",
+    "path": "/recommendations",
+    "status": 200
+  },
+  {
+    "name": "simulate_reduce_ac_hours",
+    "path": "/simulate",
+    "status": 200
+  },
+  {
+    "name": "simulate_swap_efficient_ac",
+    "path": "/simulate",
+    "status": 200
+  },
+  {
+    "name": "error_validation_422",
+    "path": "/calculate/consumption",
+    "status": 422
+  },
+  {
+    "name": "error_unknown_appliance_400",
+    "path": "/simulate",
+    "status": 400
+  }
+]

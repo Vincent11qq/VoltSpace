@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/simulate",
+    "body": {
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900,
+          "hours_per_day": 9,
+          "days_per_month": 30,
+          "voltage": 220
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130,
+          "hours_per_day": 24,
+          "days_per_month": 30,
+          "voltage": 110
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250,
+          "hours_per_day": 6,
+          "days_per_month": 30,
+          "voltage": 110
+        }
+      ],
+      "changes": [
+        {
+          "appliance_id": "ghost",
+          "field": "hours_per_day",
+          "value": 3
+        }
+      ]
+    }
+  },
+  "status": 400,
+  "response": {
+    "error": true,
+    "code": "appliance_not_found",
+    "message": "these changes did not match any appliance: ghost",
+    "field": null,
+    "details": null
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/cost",
+    "body": {
+      "consumption_kwh": 763.2,
+      "month": 8,
+      "billing_period": "bi_monthly"
+    }
+  },
+  "status": 200,
+  "response": {
+    "plan_id": "tw_residential_tiered",
+    "plan_name_en": "Taipower residential - progressive (tiered) rate",
+    "plan_name_zh": "台電住宅用電－累進（級距）電價",
+    "plan_type": "tiered",
+    "season": "summer",
+    "season_label_en": "Summer (Jun 1 - Sep 30)",
+    "season_label_zh": "夏月（6月1日至9月30日）",
+    "billing_months": 2,
+    "consumption_kwh": 763.2,
+    "total_amount": 1814.04,
+    "total_amount_rounded": 1814,
+    "currency": "TWD",
+    "effective_rate_per_kwh": 2.3769,
+    "lines": [
+      {
+        "tier_index": 1,
+        "label_zh": "120度以下部分",
+        "range_from_kwh": 0.0,
+        "range_to_kwh": 240.0,
+        "rate_per_kwh": 1.68,
+        "kwh_in_tier": 240.0,
+        "amount": 403.2
+      },
+      {
+        "tier_index": 2,
+        "label_zh": "121~330度部分",
+        "range_from_kwh": 240.0,
+        "range_to_kwh": 660.0,
+        "rate_per_kwh": 2.45,
+        "kwh_in_tier": 420.0,
+        "amount": 1029.0
+      },
+      {
+        "tier_index": 3,
+        "label_zh": "331~500度部分",
+        "range_from_kwh": 660.0,
+        "range_to_kwh": 1000.0,
+        "rate_per_kwh": 3.7,
+        "kwh_in_tier": 103.2,
+        "amount": 381.84
+      }
+    ],
+    "warnings": [
+      {
+        "code": "estimate_only",
+        "message_zh": "此為依 VoltSpace 電價表計算的估算值。實際帳單還包含計費期間、分攤方式，以及房東可能採用的轉售費率。",
+        "message_en": "This is an estimate based on the VoltSpace tariff table. The real bill also includes metering, proration and possibly a landlord's resale price."
+      }
+    ],
+    "is_estimate": false,
+    "consumption_source": "input_kwh",
+    "computed_total_monthly_kwh": null
+  }
+}

@@ -1,0 +1,37 @@
+# VoltSpace backend - runtime dependencies
+#
+# These versions are the ones this MVP was developed and tested against.
+#
+# IMPORTANT - Python version compatibility
+# ----------------------------------------
+# The pins below are chosen so that every package installs from a PREBUILT WHEEL on both
+# Python 3.12 and Python 3.14 (verified with tools/resolve_pins.py). No Rust or C
+# compiler is required.
+#
+# `pydantic-core` is the package that catches people out: it is a compiled extension and
+# older releases (for example 2.27.x, which pairs with pydantic 2.10) only support up to
+# Python 3.13. On Python 3.14 pip then falls back to building it from source and fails
+# with:
+#     error: the configured Python interpreter version (3.14) is newer than
+#            PyO3's maximum supported version (3.13)
+# pydantic 2.14.1 -> pydantic-core 2.50.1 ships cp312 *and* cp314 wheels, so it works on
+# both. Check availability for any interpreter with:
+#     python tools/resolve_pins.py --tag cp312 --tag cp314
+
+# --- API framework -----------------------------------------------------------
+fastapi==0.143.0
+uvicorn==0.54.0
+pydantic==2.14.1
+
+# --- Testing -----------------------------------------------------------------
+pytest==9.1.1
+httpx==0.28.1
+
+# Transitive pins. pip installs these automatically; they are listed so an offline
+# install (tools/resolve_deps.py + tools/install_wheels.py) is fully reproducible:
+#   starlette==1.8.0, pydantic-core==2.50.1, annotated-doc==0.0.5,
+#   annotated-types==0.8.0, typing-extensions==4.16.0, typing-inspection==0.4.4,
+#   anyio==4.15.1, idna==3.20, sniffio==1.3.1, click==8.5.0, h11==0.16.0,
+#   colorama==0.4.6, httpcore==1.0.9, certifi==2026.7.22, opentelemetry-api==1.45.1,
+#   iniconfig==2.3.1, packaging==26.3, pluggy==1.6.0, pygments==2.21.0,
+#   exceptiongroup==1.3.1, tomli==2.5.0

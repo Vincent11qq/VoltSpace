@@ -1,0 +1,44 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/calculate/consumption",
+    "body": {
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900,
+          "hours_per_day": 9,
+          "days_per_month": 30,
+          "voltage": 220
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "response": {
+    "count": 1,
+    "total_daily_kwh": 8.1,
+    "total_monthly_kwh": 243.0,
+    "average_monthly_kwh_per_appliance": 243.0,
+    "highest_consumption_appliance": "冷氣機",
+    "appliances": [
+      {
+        "appliance_id": "a1",
+        "name": "冷氣機",
+        "category": "cooling",
+        "power_watts": 900.0,
+        "hours_per_day": 9.0,
+        "days_per_month": 30,
+        "quantity": 1,
+        "daily_kwh": 8.1,
+        "monthly_kwh": 243.0,
+        "share_of_total_percent": 100.0,
+        "replacement_label": null,
+        "replaced_from": null,
+        "warnings": []
+      }
+    ]
+  }
+}

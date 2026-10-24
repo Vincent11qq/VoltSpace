@@ -1,0 +1,344 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/simulate",
+    "body": {
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900,
+          "hours_per_day": 9,
+          "days_per_month": 30,
+          "voltage": 220
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130,
+          "hours_per_day": 24,
+          "days_per_month": 30,
+          "voltage": 110
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250,
+          "hours_per_day": 6,
+          "days_per_month": 30,
+          "voltage": 110
+        }
+      ],
+      "changes": [
+        {
+          "appliance_id": "a1",
+          "field": "replace_with",
+          "replacement": {
+            "label": "一級能效變頻冷氣",
+            "power_watts": 700,
+            "hours_per_day": 7
+          }
+        }
+      ],
+      "month": 8,
+      "load_limit_amps": 15
+    }
+  },
+  "status": 200,
+  "response": {
+    "currency": "TWD",
+    "month": 8,
+    "plan_id": "tw_residential_tiered",
+    "billing_period": "monthly",
+    "billing_months": 1,
+    "season_label_zh": "夏月（6月1日至9月30日）",
+    "baseline": {
+      "total_monthly_kwh": 381.6,
+      "estimated_bill_twd": 907.02,
+      "estimated_bill_rounded_twd": 907,
+      "effective_rate_per_kwh": 2.3769,
+      "appliance_count": 3,
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 900.0,
+          "hours_per_day": 9.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 8.1,
+          "monthly_kwh": 243.0,
+          "share_of_total_percent": 63.68,
+          "replacement_label": null,
+          "replaced_from": null,
+          "warnings": []
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130.0,
+          "hours_per_day": 24.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 3.12,
+          "monthly_kwh": 93.6,
+          "share_of_total_percent": 24.53,
+          "replacement_label": null,
+          "replaced_from": null,
+          "warnings": [
+            {
+              "code": "near_continuous_use",
+              "field": "hours_per_day",
+              "message_zh": "每日 24 小時幾乎是全天運轉，建議再用負載估算確認用電安全。",
+              "message_en": "24 hours/day means this appliance runs almost continuously; use the load estimate to confirm it is safe."
+            }
+          ]
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250.0,
+          "hours_per_day": 6.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 1.5,
+          "monthly_kwh": 45.0,
+          "share_of_total_percent": 11.79,
+          "replacement_label": null,
+          "replaced_from": null,
+          "warnings": []
+        }
+      ],
+      "bill_lines": [
+        {
+          "tier_index": 1,
+          "label_zh": "120度以下部分",
+          "range_from_kwh": 0.0,
+          "range_to_kwh": 120.0,
+          "rate_per_kwh": 1.68,
+          "kwh_in_tier": 120.0,
+          "amount": 201.6
+        },
+        {
+          "tier_index": 2,
+          "label_zh": "121~330度部分",
+          "range_from_kwh": 120.0,
+          "range_to_kwh": 330.0,
+          "rate_per_kwh": 2.45,
+          "kwh_in_tier": 210.0,
+          "amount": 514.5
+        },
+        {
+          "tier_index": 3,
+          "label_zh": "331~500度部分",
+          "range_from_kwh": 330.0,
+          "range_to_kwh": 500.0,
+          "rate_per_kwh": 3.7,
+          "kwh_in_tier": 51.6,
+          "amount": 190.92
+        }
+      ]
+    },
+    "modified": {
+      "total_monthly_kwh": 285.6,
+      "estimated_bill_twd": 607.32,
+      "estimated_bill_rounded_twd": 607,
+      "effective_rate_per_kwh": 2.1265,
+      "appliance_count": 3,
+      "appliances": [
+        {
+          "appliance_id": "a1",
+          "name": "冷氣機",
+          "category": "cooling",
+          "power_watts": 700.0,
+          "hours_per_day": 7.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 4.9,
+          "monthly_kwh": 147.0,
+          "share_of_total_percent": 51.47,
+          "replacement_label": "一級能效變頻冷氣",
+          "replaced_from": "冷氣機",
+          "warnings": []
+        },
+        {
+          "appliance_id": "a2",
+          "name": "冰箱",
+          "category": "cooling",
+          "power_watts": 130.0,
+          "hours_per_day": 24.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 3.12,
+          "monthly_kwh": 93.6,
+          "share_of_total_percent": 32.77,
+          "replacement_label": null,
+          "replaced_from": null,
+          "warnings": [
+            {
+              "code": "near_continuous_use",
+              "field": "hours_per_day",
+              "message_zh": "每日 24 小時幾乎是全天運轉，建議再用負載估算確認用電安全。",
+              "message_en": "24 hours/day means this appliance runs almost continuously; use the load estimate to confirm it is safe."
+            }
+          ]
+        },
+        {
+          "appliance_id": "a3",
+          "name": "桌上型電腦",
+          "category": "electronics",
+          "power_watts": 250.0,
+          "hours_per_day": 6.0,
+          "days_per_month": 30,
+          "quantity": 1,
+          "daily_kwh": 1.5,
+          "monthly_kwh": 45.0,
+          "share_of_total_percent": 15.76,
+          "replacement_label": null,
+          "replaced_from": null,
+          "warnings": []
+        }
+      ],
+      "bill_lines": [
+        {
+          "tier_index": 1,
+          "label_zh": "120度以下部分",
+          "range_from_kwh": 0.0,
+          "range_to_kwh": 120.0,
+          "rate_per_kwh": 1.68,
+          "kwh_in_tier": 120.0,
+          "amount": 201.6
+        },
+        {
+          "tier_index": 2,
+          "label_zh": "121~330度部分",
+          "range_from_kwh": 120.0,
+          "range_to_kwh": 330.0,
+          "rate_per_kwh": 2.45,
+          "kwh_in_tier": 165.6,
+          "amount": 405.72
+        }
+      ]
+    },
+    "delta": {
+      "saved_kwh": 96.0,
+      "saved_amount_twd": 299.7,
+      "saved_amount_rounded_twd": 300,
+      "saved_percent_of_kwh": 25.16,
+      "saved_percent_of_amount": 33.04,
+      "annual_saved_amount_twd": 3596.4,
+      "is_saving": true
+    },
+    "comparison_table": [
+      {
+        "appliance": "冷氣機",
+        "baseline_kwh": 243.0,
+        "modified_kwh": 147.0,
+        "saved_kwh": 96.0,
+        "percent_change": -39.51,
+        "status": "changed",
+        "replaced_by": null,
+        "replacement_label": "一級能效變頻冷氣"
+      },
+      {
+        "appliance": "冰箱",
+        "baseline_kwh": 93.6,
+        "modified_kwh": 93.6,
+        "saved_kwh": 0.0,
+        "percent_change": 0.0,
+        "status": "unchanged",
+        "replaced_by": null,
+        "replacement_label": null
+      },
+      {
+        "appliance": "桌上型電腦",
+        "baseline_kwh": 45.0,
+        "modified_kwh": 45.0,
+        "saved_kwh": 0.0,
+        "percent_change": 0.0,
+        "status": "unchanged",
+        "replaced_by": null,
+        "replacement_label": null
+      }
+    ],
+    "appliance_deltas": [
+      {
+        "appliance": "冷氣機",
+        "appliance_id": "a1",
+        "baseline_kwh": 243.0,
+        "modified_kwh": 147.0,
+        "saved_kwh": 96.0,
+        "percent_change": -39.51,
+        "status": "changed",
+        "replaced_by": null,
+        "replacement_label": "一級能效變頻冷氣"
+      },
+      {
+        "appliance": "冰箱",
+        "appliance_id": "a2",
+        "baseline_kwh": 93.6,
+        "modified_kwh": 93.6,
+        "saved_kwh": 0.0,
+        "percent_change": 0.0,
+        "status": "unchanged",
+        "replaced_by": null,
+        "replacement_label": null
+      },
+      {
+        "appliance": "桌上型電腦",
+        "appliance_id": "a3",
+        "baseline_kwh": 45.0,
+        "modified_kwh": 45.0,
+        "saved_kwh": 0.0,
+        "percent_change": 0.0,
+        "status": "unchanged",
+        "replaced_by": null,
+        "replacement_label": null
+      }
+    ],
+    "applied_changes": [
+      {
+        "appliance": "冷氣機",
+        "new_name": null,
+        "appliance_id": "a1",
+        "field": "replace_with",
+        "before": {
+          "name": "冷氣機",
+          "power_watts": 900.0,
+          "hours_per_day": 9.0,
+          "days_per_month": 30,
+          "quantity": 1
+        },
+        "after": {
+          "name": "冷氣機",
+          "power_watts": 700.0,
+          "hours_per_day": 7.0,
+          "days_per_month": 30,
+          "quantity": 1
+        },
+        "label_zh": null
+      }
+    ],
+    "load": {
+      "limit_amps": 15.0,
+      "baseline_current_amps": 7.5455,
+      "modified_current_amps": 6.6364,
+      "current_change_amps": -0.9091,
+      "baseline_verdict": "safe",
+      "modified_verdict": "safe",
+      "baseline_severity": "ok",
+      "modified_severity": "ok",
+      "disclaimer_zh": "本工具僅提供初步負載估算，不構成電路安全保證，也不能取代專業電工的現場檢查。"
+    },
+    "notes": [
+      "baseline 資料為原始家電資料的複本，模擬過程不會修改使用者已儲存的資料。",
+      "所有金額與度數皆為估算值，實際帳單可能因級距、季節與房東收費方式而不同。"
+    ]
+  }
+}
