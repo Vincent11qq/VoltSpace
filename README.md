@@ -11,10 +11,10 @@ VoltSpace 是 Group 9 的租屋用電管理 App。這個目錄現在是**整套�
 
 ### 第一次使用（下載後）
 
-只需要一個前置條件：**這台電腦有 Python 3.10 以上**。
-然後在 `backend/` 目錄執行一次：
+只需要一個前置條件：**這台電腦有 Python 3.10 以上**，然後**先進入 `backend/` 資料夾**：
 
 ```
+cd backend
 python start.py --setup        # 建立 .venv 並安裝套件（約 1 分鐘）
 ```
 
@@ -22,7 +22,7 @@ python start.py --setup        # 建立 .venv 並安裝套件（約 1 分鐘）
 `.venv` → 執行本程式的解譯器 → `py` → `python` → `python3` → 常見安裝路徑），
 **沒有任何寫死的路徑**，所以複製到任何電腦都能用。
 
-### 之後每次
+### 之後每次（一樣在 `backend/` 資料夾內）
 
 ```
 run_app.bat            # Windows：雙擊即可
@@ -47,18 +47,23 @@ run_app.bat            # Windows：雙擊即可
 | <http://127.0.0.1:8000/health> | 健康檢查 |
 
 > 詳細的整合說明、三個成員的原始成果分別被怎麼處理，見
-> [`docs/integration.md`](docs/integration.md)。
+> [`backend/docs/integration.md`](backend/docs/integration.md)。
+>
+> 其他文件：[Supabase 整合](backend/docs/supabase.md)（選用）、
+> [程式碼審查紀錄](backend/docs/code-review-audit.md)、
+> [API 規格](backend/docs/openapi.json)。
 
 ### 換到另一台電腦時
 
-整個 `backend/` 資料夾複製過去即可，**不需要修改任何路徑**：
+整個專案資料夾複製過去即可，**不需要修改任何路徑**：
 
-- 程式裡沒有 `C:\Users\...` 這類絕對路徑（`tests/test_portability.py` 會檢查）。
+- 程式裡沒有 `C:\Users\...` 這類絕對路徑（`backend/tests/test_portability.py` 會檢查）。
 - `.venv/` 不必一起複製；到新電腦跑一次 `python start.py --setup` 重建即可
   （`.venv` 綁定作業系統與 Python 版本，複製過去通常不能用）。
 - 家電資料存在 `backend/.data/voltspace.db`；想保留就一起複製，不想保留刪掉即可。
 
-**如果沒有網路**，用離線安裝（見第 8.2 節），不需要 pip。
+**如果沒有網路**，用離線安裝（見 [`backend/README` 的疑難排解](backend/docs/integration.md)），
+不需要 pip。
 
 ---
 
@@ -76,51 +81,57 @@ run_app.bat            # Windows：雙擊即可
 ## 1. 目錄結構
 
 ```
-backend/
-├── app/
-│   ├── main.py                  FastAPI 應用：計算 API + 家電儲存 + 儀表板端點
-│   ├── schemas.py               Pydantic 請求／回應模型（含 OpenAPI 範例）
-│   ├── store.py                 本地 SQLite 家電儲存（不需要雲端就能用）
-│   ├── data_check.py            啟動時的資料檔完整性檢查（壞資料直接拒絕啟動）
-│   ├── calculators/             ← 純計算，無框架相依
-│   │   ├── consumption.py       每月用電量 + 輸入驗證
-│   │   ├── electricity_bill.py  電費（級距／時間電價／單一費率）
-│   │   └── load_estimator.py    電流與負載估算
-│   ├── services/                ← 規則與資料整合
-│   │   ├── recommendations.py   規則式節電建議
-│   │   └── simulation.py        情境模擬
-│   └── data/
-│       ├── tariffs.json         電價方案（台電住宅累進等 3 種）
-│       └── appliances.json      12 種家電參考功率／電壓／規則
-├── web/                         ← Member A 的介面（HTML/CSS/JS，直接由後端提供）
-│   ├── index.html
-│   ├── app.css                  沿用原型的新擬物風格
-│   └── app.js                   只呼叫 API，不含公式與費率
-├── desktop/app.py               Flet 桌面版（已升級到 Flet 1.0 並改接 API）
-├── db/schema.sql                Supabase/PostgreSQL schema（已修正 contract）
-├── start.py                     一鍵啟動器（挑 Python、起後端、開瀏覽器）
-├── run_app.bat / run_app.sh     雙擊用的一鍵入口
-├── tests/                       500 個測試
-│   ├── conftest.py
-│   ├── test_consumption.py
-│   ├── test_electricity_bill.py
-│   ├── test_load_estimator.py
-│   ├── test_recommendations.py
-│   ├── test_simulation.py
-│   ├── test_data_check.py
-│   ├── test_household_api.py    儲存與儀表板端點
-│   └── test_api.py
-├── docs/
-│   ├── integration.md           三個成員的成果如何整合（先讀這份）
-│   ├── supabase.md              如何使用 Member B 的 Supabase schema
-│   ├── openapi.json             產生的 OpenAPI 3.1 規格
-│   ├── examples/*.json          13 個真實請求範例（由程式產生）
+VoltSpace/
+├── README.md                    本文件：怎麼跑、怎麼整合
+├── backend/                     ← 可執行的系統（主體）
+│   ├── app/
+│   │   ├── main.py              FastAPI 應用：計算 API + 家電儲存 + 儀表板端點
+│   │   ├── schemas.py           Pydantic 請求／回應模型（含 OpenAPI 範例）
+│   │   ├── store.py             本地 SQLite 家電儲存（不需要雲端就能用）
+│   │   ├── data_check.py        啟動時的資料檔完整性檢查（壞資料直接拒絕啟動）
+│   │   ├── calculators/         ← 純計算，無框架相依
+│   │   │   ├── consumption.py       每月用電量 + 輸入驗證
+│   │   │   ├── electricity_bill.py  電費（級距／時間電價／單一費率）
+│   │   │   └── load_estimator.py    電流與負載估算
+│   │   ├── services/            ← 規則與資料整合
+│   │   │   ├── recommendations.py   規則式節電建議
+│   │   │   └── simulation.py        情境模擬
+│   │   └── data/
+│   │       ├── tariffs.json         電價方案（台電住宅累進等 3 種）
+│   │       └── appliances.json      12 種家電參考功率／電壓／規則
+│   ├── web/                     ← Member A 的介面（HTML/CSS/JS，由後端提供）
+│   │   ├── index.html
+│   │   ├── app.css              沿用原型的新擬物風格
+│   │   └── app.js               只呼叫 API，不含公式與費率
+│   ├── desktop/app.py           Flet 桌面版（已升級到 Flet 1.0 並改接 API）
+│   ├── db/schema.sql            Supabase/PostgreSQL schema（已修正 contract）
+│   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
+│   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
+│   ├── tests/                   525 個測試
+│   │   ├── conftest.py
+│   │   ├── test_consumption.py
+│   │   ├── test_electricity_bill.py
+│   │   ├── test_load_estimator.py
+│   │   ├── test_recommendations.py
+│   │   ├── test_simulation.py
+│   │   ├── test_data_check.py
+│   │   ├── test_household_api.py    儲存與儀表板端點
+│   │   ├── test_portability.py      可攜性（不得有寫死路徑）
+│   │   └── test_api.py
+│   ├── docs/
+│   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
+│   │   ├── supabase.md          如何使用 Member B 的 Supabase schema
+│   │   ├── openapi.json         產生的 OpenAPI 3.1 規格
+│   │   ├── examples/*.json      13 個真實請求範例（由程式產生）
 │   └── code-review-audit.md     對抗式程式碼審查紀錄與修正對照表
 ├── tools/                       產生文件、smoke test、benchmark、離線安裝等
-├── pytest.ini
-├── requirements.txt             執行後端所需
-├── requirements-desktop.txt     選用：Flet 桌面版
-└── README.md
+│   ├── pytest.ini
+│   ├── requirements.txt         執行後端所需
+│   └── requirements-desktop.txt 選用：Flet 桌面版
+├── frontend/                    Member A 的原始 Flet 原型（Flet 0.x，僅供對照）
+├── prototype/                   同上（對照用快照）
+├── Python/                      Member B 的原始 Python 模組（已被 backend/app/store.py 取代）
+└── Supabase/                    Member B 的原始 SQL（已被 backend/db/schema.sql 取代）
 ```
 
 ---
@@ -234,7 +245,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 467 個測試
+python -m pytest                     # 全部 525 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -311,7 +322,7 @@ curl -X POST http://127.0.0.1:8000/calculate/consumption \
       }'
 ```
 
-回應（節錄，完整內容見 `docs/examples/consumption_household.json`）：
+回應（節錄，完整內容見 `backend/docs/examples/consumption_household.json`）：
 
 ```json
 {
@@ -498,7 +509,7 @@ curl -X POST http://127.0.0.1:8000/recommendations \
       ],"month":8,"top_n":3}'
 ```
 
-回應（節錄，完整內容見 `docs/examples/recommendations_student_room.json`）：
+回應（節錄，完整內容見 `backend/docs/examples/recommendations_student_room.json`）：
 
 ```json
 {
@@ -597,7 +608,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
       }'
 ```
 
-回應（節錄，完整內容見 `docs/examples/simulate_reduce_ac_hours.json`）：
+回應（節錄，完整內容見 `backend/docs/examples/simulate_reduce_ac_hours.json`）：
 
 ```json
 {
@@ -643,7 +654,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
 }
 ```
 
-`docs/examples/simulate_swap_efficient_ac.json` 是更換機種的版本
+`backend/docs/examples/simulate_swap_efficient_ac.json` 是更換機種的版本
 （功率 900W → 700W、時數 9 → 7 小時）：381.6 → 285.6 度，每月省 299.7 元，
 年度省 3,596.4 元。
 
@@ -725,11 +736,11 @@ curl -X POST http://127.0.0.1:8000/simulate \
 
 ---
 
-## 5. 測試
+## 5. 測試（以下指令都在 `backend/` 內執行）
 
 ```bash
 python -m pytest -q
-# 467 passed
+# 525 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -755,7 +766,7 @@ python -m pytest -q
 
 ### 5.1 程式碼審查紀錄
 
-`docs/code-review-audit.md` 是一次對抗式自我審查的完整紀錄：在 371 個測試全過的版本上，
+`backend/docs/code-review-audit.md` 是一次對抗式自我審查的完整紀錄：在 371 個測試全過的版本上，
 仍找出 5 個真實缺陷（三相電流被忽略、`/simulate` 忽略 `billing_months`、
 改名替換把一列拆成兩列、同名家電的建議被去重吃掉、含別名的中文名稱比對不到）
 與 2 個文件過時問題。這些全部已修正，且每個都補上迴歸測試；該文件保留
@@ -891,7 +902,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 8.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 467 passed
+python -m pytest                     # 應該 525 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -900,5 +911,5 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 467 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 467 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 525 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 525 passed，`/docs` 正常 |
