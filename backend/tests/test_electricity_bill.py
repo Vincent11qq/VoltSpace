@@ -1,8 +1,14 @@
 """Tests for the electricity bill calculator.
 
-The headline test reproduces the worked example published with the Taipower
-residential tier table (800 kWh in a summer month = NT$2,977), which pins down both
-the tier boundaries and the rates.
+The headline test reproduces a worked example published with the Taipower residential
+tier table (700 kWh in a summer month = NT$2,423.1), which pins down both the tier
+boundaries and the rates.
+
+Rate history, for anyone reading these tests later:
+
+* 2024-04-01 .. 2025-09-30  summer 1.68 / 2.45 / 3.70 / 5.04 / 6.24 / 8.46
+                            non-sum 1.68 / 2.16 / 3.03 / 4.14 / 5.07 / 6.63
+* from 2025-10-01 (the table below, still current)
 """
 
 from __future__ import annotations
@@ -24,6 +30,12 @@ from app.calculators.electricity_bill import (
     resolve_season,
     season_label,
 )
+
+# The official residential rate table that took effect on 2025-10-01 (MOEA adjustment),
+# used by 2026 billing. Kept here so the tests state the expected numbers explicitly
+# rather than deriving them from the file they are supposed to be checking.
+OFFICIAL_SUMMER = [1.78, 2.55, 3.80, 5.14, 6.44, 8.86]
+OFFICIAL_NON_SUMMER = [1.78, 2.26, 3.13, 4.24, 5.27, 7.03]
 
 
 class TestTariffData:
@@ -48,7 +60,9 @@ class TestTariffData:
                 # Skip docstrings/description strings that merely document a price.
                 if line.lstrip().startswith(("#", '"', "'")) or '"summary"' in line:
                     continue
-                if re.search(r"(?<![\d.])(1\.68|2\.45|3\.70|5\.04|6\.24|8\.46)\b", line):
+                if re.search(
+                    r"(?<![\d.])(1\.68|2\.45|3\.70|5\.04|6\.24|8\.46|1\.78|2\.55|8\.86)\b", line
+                ):
                     offenders.append(f"{source.name}:{line_number}: {line.strip()}")
         assert offenders == [], "tariff rates must come from tariffs.json: " + "; ".join(offenders)
 
@@ -56,14 +70,7 @@ class TestTariffData:
         """The JSON is the single source of truth for the numbers the tests assert."""
 
         plan = get_plan("tw_residential_tiered")
-        assert [tier["rate"] for tier in plan["seasons"]["summer"]["tiers"]] == [
-            1.68,
-            2.45,
-            3.70,
-            5.04,
-            6.24,
-            8.46,
-        ]
+        assert [tier["rate"] for tier in plan["seasons"]["summer"]["tiers"]] == OFFICIAL_SUMMER
 
     def test_tier_table_is_complete_for_both_seasons(self):
         plan = get_plan("tw_residential_tiered")
@@ -78,8 +85,25 @@ class TestTariffData:
         plan = get_plan("tw_residential_tiered")
         summer = [tier["rate"] for tier in plan["seasons"]["summer"]["tiers"]]
         non_summer = [tier["rate"] for tier in plan["seasons"]["non_summer"]["tiers"]]
-        assert summer == [1.68, 2.45, 3.70, 5.04, 6.24, 8.46]
-        assert non_summer == [1.68, 2.16, 3.03, 4.14, 5.07, 6.63]
+        assert summer == OFFICIAL_SUMMER
+        assert non_summer == OFFICIAL_NON_SUMMER
+
+    def test_rates_reflect_the_2025_10_01_adjustment(self):
+        """Every tier rose; the top two rose by more than the rest.
+
+        This documents the shape of the adjustment so an accidental partial edit of the
+        table (one tier updated, another missed) shows up as a failure.
+        """
+
+        plan = get_plan("tw_residential_tiered")
+        previous_summer = [1.68, 2.45, 3.70, 5.04, 6.24, 8.46]
+        current_summer = [tier["rate"] for tier in plan["seasons"]["summer"]["tiers"]]
+        increases = [round(new - old, 2) for new, old in zip(current_summer, previous_summer)]
+        assert increases == [0.10, 0.10, 0.10, 0.10, 0.20, 0.40]
+
+    def test_effective_date_matches_the_adjustment(self):
+        plan = get_plan("tw_residential_tiered")
+        assert plan["effective_from"] == "2025-10-01"
 
     def test_non_summer_rates_are_never_higher_than_summer(self):
         plan = get_plan("tw_residential_tiered")
@@ -134,29 +158,35 @@ class TestSeasonResolution:
 
 
 class TestTieredBill:
-    def test_official_worked_example_800_kwh_summer(self):
-        """Taipower: 1.68*120 + 2.45*210 + 3.70*170 + 5.04*200 + 6.24*100.
+    def test_official_worked_example_700_kwh_summer(self):
+        """Published example for the current table: 700 kWh in July = NT$2,423.1.
 
-        The published leaflet prints NT$2,977 while the tier amounts sum to
-        NT$2,977.10, so the comparison allows that one rounding step.
+        1.78*120 + 2.55*210 + 3.80*170 + 5.14*200 = 2,423.1
         """
 
-        bill = calculate_bill(800, month=8)
-        assert bill["total_amount"] == pytest.approx(2977.0, abs=0.5)
-        assert bill["total_amount_rounded"] == 2977
+        bill = calculate_bill(700, month=7)
         assert bill["season"] == "summer"
+        assert bill["total_amount"] == pytest.approx(2423.1)
+        assert [line["kwh_in_tier"] for line in bill["lines"]] == [120, 210, 170, 200]
+        assert [line["rate_per_kwh"] for line in bill["lines"]] == [1.78, 2.55, 3.80, 5.14]
+
+    def test_800_kwh_in_a_summer_month(self):
+        # 1.78*120 + 2.55*210 + 3.80*170 + 5.14*200 + 6.44*100 = 3,067.10
+        bill = calculate_bill(800, month=8)
+        assert bill["season"] == "summer"
+        assert bill["total_amount"] == pytest.approx(3067.1)
         assert [line["kwh_in_tier"] for line in bill["lines"]] == [120, 210, 170, 200, 100]
 
     def test_800_kwh_in_a_non_summer_month(self):
-        # 1.68*120 + 2.16*210 + 3.03*170 + 4.14*200 + 5.07*100 = 2,505.30
+        # 1.78*120 + 2.26*210 + 3.13*170 + 4.24*200 + 5.27*100 = 2,595.30
         bill = calculate_bill(800, month=1)
         assert bill["season"] == "non_summer"
-        assert bill["total_amount"] == pytest.approx(2505.3)
-        assert [line["rate_per_kwh"] for line in bill["lines"]] == [1.68, 2.16, 3.03, 4.14, 5.07]
+        assert bill["total_amount"] == pytest.approx(2595.3)
+        assert [line["rate_per_kwh"] for line in bill["lines"]] == [1.78, 2.26, 3.13, 4.24, 5.27]
 
     def test_consumption_inside_the_first_tier(self):
         bill = calculate_bill(100, month=8)
-        assert bill["total_amount"] == pytest.approx(168.0)
+        assert bill["total_amount"] == pytest.approx(178.0)  # 100 * 1.78
         assert len(bill["lines"]) == 1
         assert bill["lines"][0]["kwh_in_tier"] == pytest.approx(100.0)
 
@@ -172,18 +202,18 @@ class TestTieredBill:
     def test_120_kwh_is_exactly_one_tier(self):
         bill = calculate_bill(120, month=8)
         assert len(bill["lines"]) == 1
-        assert bill["total_amount"] == pytest.approx(201.6)
+        assert bill["total_amount"] == pytest.approx(213.6)   # 120 * 1.78
 
     def test_121_kwh_spills_into_the_second_tier(self):
         bill = calculate_bill(121, month=8)
         assert len(bill["lines"]) == 2
-        assert bill["total_amount"] == pytest.approx(1.68 * 120 + 2.45 * 1)
+        assert bill["total_amount"] == pytest.approx(1.78 * 120 + 2.55 * 1)
 
     def test_above_the_top_tier(self):
         bill = calculate_bill(1200, month=8)
         assert len(bill["lines"]) == 6
         expected = (
-            1.68 * 120 + 2.45 * 210 + 3.70 * 170 + 5.04 * 200 + 6.24 * 300 + 8.46 * 200
+            1.78 * 120 + 2.55 * 210 + 3.80 * 170 + 5.14 * 200 + 6.44 * 300 + 8.86 * 200
         )
         assert bill["total_amount"] == pytest.approx(expected)
         assert bill["lines"][-1]["range_to_kwh"] is None
@@ -208,7 +238,7 @@ class TestTieredBill:
         assert len(bill["lines"]) == 1
         line = bill["lines"][0]
         assert line["tier_index"] == 1
-        assert line["rate_per_kwh"] == 1.68
+        assert line["rate_per_kwh"] == 1.78
         assert line["kwh_in_tier"] == 0.0
         assert line["amount"] == 0.0
         assert any(item["code"] == "no_consumption" for item in bill["warnings"])

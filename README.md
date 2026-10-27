@@ -107,7 +107,7 @@ VoltSpace/
 │   ├── db/schema.sql            Supabase/PostgreSQL schema（已修正 contract）
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   525 個測試
+│   ├── tests/                   535 個測試
 │   │   ├── conftest.py
 │   │   ├── test_consumption.py
 │   │   ├── test_electricity_bill.py
@@ -117,6 +117,7 @@ VoltSpace/
 │   │   ├── test_data_check.py
 │   │   ├── test_household_api.py    儲存與儀表板端點
 │   │   ├── test_portability.py      可攜性（不得有寫死路徑）
+│   │   ├── test_tariff_import.py    電價匯入工具與資料檔一致性
 │   │   └── test_api.py
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -245,7 +246,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 525 個測試
+python -m pytest                     # 全部 535 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -267,6 +268,19 @@ python tools/probe_errors.py
 ```bash
 python tools/export_openapi.py
 python tools/export_examples.py
+```
+
+確認文件裡的數字與程式輸出一致（文件很容易過時，這個會抓出來）：
+
+```bash
+python tools/check_docs_numbers.py
+```
+
+Flet 桌面版與網頁介面的靜態檢查（不開視窗也能驗證）：
+
+```bash
+python tools/check_desktop.py http://127.0.0.1:8000
+python tools/check_web_ui.py
 ```
 
 ---
@@ -399,17 +413,17 @@ curl -X POST http://127.0.0.1:8000/calculate/cost \
   "season_label_zh": "夏月（6月1日至9月30日）",
   "billing_months": 1,
   "consumption_kwh": 381.6,
-  "total_amount": 907.02,
-  "total_amount_rounded": 907,
+  "total_amount": 945.18,
+  "total_amount_rounded": 945,
   "currency": "TWD",
-  "effective_rate_per_kwh": 2.3769,
+  "effective_rate_per_kwh": 2.4769,
   "lines": [
     {"tier_index": 1, "label_zh": "120度以下部分", "range_from_kwh": 0.0, "range_to_kwh": 120.0,
-     "rate_per_kwh": 1.68, "kwh_in_tier": 120.0, "amount": 201.6},
+     "rate_per_kwh": 1.78, "kwh_in_tier": 120.0, "amount": 213.6},
     {"tier_index": 2, "label_zh": "121~330度部分", "range_from_kwh": 120.0, "range_to_kwh": 330.0,
-     "rate_per_kwh": 2.45, "kwh_in_tier": 210.0, "amount": 514.5},
+     "rate_per_kwh": 2.55, "kwh_in_tier": 210.0, "amount": 535.5},
     {"tier_index": 3, "label_zh": "331~500度部分", "range_from_kwh": 330.0, "range_to_kwh": 500.0,
-     "rate_per_kwh": 3.7, "kwh_in_tier": 51.6, "amount": 190.92}
+     "rate_per_kwh": 3.8, "kwh_in_tier": 51.6, "amount": 196.08}
   ],
   "warnings": [{"code": "estimate_only", "message_zh": "此為依 VoltSpace 電價表計算的估算值。..."}],
   "is_estimate": false,
@@ -514,7 +528,7 @@ curl -X POST http://127.0.0.1:8000/recommendations \
 ```json
 {
   "total_monthly_kwh": 381.6,
-  "blended_rate_per_kwh": 2.3769,
+  "blended_rate_per_kwh": 2.4769,
   "top_consumers": [
     {"appliance": "冷氣機", "monthly_kwh": 243.0, "share_of_total_percent": 63.68},
     {"appliance": "冰箱", "monthly_kwh": 93.6, "share_of_total_percent": 24.53},
@@ -522,11 +536,11 @@ curl -X POST http://127.0.0.1:8000/recommendations \
   ],
   "recommendation_count": 7,
   "total_potential_monthly_saving_kwh": 116.1,
-  "total_potential_monthly_saving_twd": 275.95,
-  "total_potential_annual_saving_twd": 3311.4,
+  "total_potential_monthly_saving_twd": 287.56,
+  "total_potential_annual_saving_twd": 3450.72,
   "potential_saving_percent_of_usage": 30.42,
   "comprehensive_monthly_saving_kwh": 224.55,
-  "comprehensive_monthly_saving_twd": 533.73,
+  "comprehensive_monthly_saving_twd": 555.72,
   "aggregation_note_zh": "total_potential_* 只計算每台家電最有效的一項建議（避免同一台家電重複計算）；comprehensive_* 則是所有建議都落實時的合計，數字會較大。",
   "recommendations": [
     {
@@ -536,8 +550,8 @@ curl -X POST http://127.0.0.1:8000/recommendations \
       "reason_zh": "冷氣是租屋處最常見的高耗電來源，每多吹 1 小時，月用電量就會線性增加。",
       "suggestion_zh": "設定 26-28 度並搭配電風扇或循環扇，睡前使用定時功能，可減少 1-2 小時運轉。",
       "estimated_monthly_saving_kwh": 48.6,
-      "estimated_monthly_saving_twd": 115.52,
-      "estimated_annual_saving_twd": 1386.24,
+      "estimated_monthly_saving_twd": 120.38,
+      "estimated_annual_saving_twd": 1444.52,
       "assumption_zh": "假設每日可減少 1.8 小時使用（原 9.0 小時），每月 30 天。",
       "priority": 1, "severity": "high", "confidence": "medium", "rule_id": "ac_hours_high"
     },
@@ -616,18 +630,18 @@ curl -X POST http://127.0.0.1:8000/simulate \
   "billing_period": "monthly",
   "season_label_zh": "夏月（6月1日至9月30日）",
   "baseline": {
-    "total_monthly_kwh": 381.6, "estimated_bill_twd": 907.02,
+    "total_monthly_kwh": 381.6, "estimated_bill_twd": 945.18,
     "appliances": [{"name": "冷氣機", "power_watts": 900.0, "monthly_kwh": 243.0}]
   },
   "modified": {
-    "total_monthly_kwh": 300.6, "estimated_bill_twd": 644.07,
+    "total_monthly_kwh": 300.6, "estimated_bill_twd": 674.13,
     "appliances": [{"name": "冷氣機", "power_watts": 900.0, "monthly_kwh": 162.0,
                     "replacement_label": null}]
   },
   "delta": {
-    "saved_kwh": 81.0, "saved_amount_twd": 262.95, "saved_amount_rounded_twd": 263,
-    "saved_percent_of_kwh": 21.23, "saved_percent_of_amount": 28.99,
-    "annual_saved_amount_twd": 3155.4, "is_saving": true
+    "saved_kwh": 81.0, "saved_amount_twd": 271.05, "saved_amount_rounded_twd": 271,
+    "saved_percent_of_kwh": 21.23, "saved_percent_of_amount": 28.68,
+    "annual_saved_amount_twd": 3252.6, "is_saving": true
   },
   "comparison_table": [
     {"appliance": "冷氣機", "baseline_kwh": 243.0, "modified_kwh": 162.0,
@@ -666,7 +680,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
 **帳單期間**：`/simulate` 也接受 `billing_period` 與 `billing_months`，並且會回報
 `billing_months`。前後兩邊用同一個期間計價，數字才能和 `/calculate/cost` 對得上。
 
-**為什麼省下的金額比例（28.99%）高於度數比例（21.23%）？**
+**為什麼省下的金額比例（28.68%）高於度數比例（21.23%）？**
 因為電費是累進級距，省下的電會從最高級距開始少付，所以金額的節省幅度通常大於度數。
 
 **`changes` 支援的 `field`**
@@ -698,24 +712,52 @@ curl -X POST http://127.0.0.1:8000/simulate \
 
 ### 4.1 台電住宅累進電價（`tw_residential_tiered`）
 
-資料來源：台電住宅用電電價表（級距與費率自 2024-04-01 起適用，2025 年電價審議會決議住宅凍漲）。
+資料來源：台電住宅用電電價表。目前採用的是**經濟部 2025-10-01 生效的調漲後費率**
+（2026 年適用）。這次調整每個級距都漲 0.10 元，701–1000 度漲 0.20 元，
+1001 度以上漲 0.40 元。
 
 | 每月用電度數分段 | 夏月（6/1–9/30） | 非夏月 |
 | --- | --- | --- |
-| 120 度以下 | 1.68 元/度 | 1.68 元/度 |
-| 121–330 度 | 2.45 | 2.16 |
-| 331–500 度 | 3.70 | 3.03 |
-| 501–700 度 | 5.04 | 4.14 |
-| 701–1000 度 | 6.24 | 5.07 |
-| 1001 度以上 | 8.46 | 6.63 |
+| 120 度以下 | 1.78 元/度 | 1.78 元/度 |
+| 121–330 度 | 2.55 | 2.26 |
+| 331–500 度 | 3.80 | 3.13 |
+| 501–700 度 | 5.14 | 4.24 |
+| 701–1000 度 | 6.44 | 5.27 |
+| 1001 度以上 | 8.86 | 7.03 |
 
-**累進計算範例（同時也是測試案例）**：8 月用電 800 度
+**累進計算範例（同時也是測試案例）**：7 月用電 700 度
 
 ```
-1.68×120 + 2.45×210 + 3.70×170 + 5.04×200 + 6.24×100 = 2,977.10 元
+1.78×120 + 2.55×210 + 3.80×170 + 5.14×200 = 2,423.10 元
 ```
 
-（台電文宣將此例印為 2,977 元，差異來自最後四捨五入。測試用 `abs=0.5` 容許這一步。）
+（與台電公布範例的 2,423 元相符，測試斷言 `2423.1`。）
+
+8 月用電 800 度則為：
+
+```
+1.78×120 + 2.55×210 + 3.80×170 + 5.14×200 + 6.44×100 = 3,067.10 元
+```
+
+> **舊費率（2024-04-01 ～ 2025-09-30）** 仍記錄在 `tariffs.json` 的 `notes` 裡方便對照：
+> 夏月 1.68 / 2.45 / 3.70 / 5.04 / 6.24 / 8.46。
+> 換算下來，同樣 800 度在舊表是 2,977.10 元、新表是 3,067.10 元（+90 元）。
+
+**台電再調價時怎麼更新？** 不用手改 JSON。`tools/import_tariff.py` 會把費率表轉成
+JSON 格式並驗證（級距必須遞增、不能有 0 或負數），避免手動編輯打錯一個數字：
+
+```bash
+# 1. 編輯 tools/import_tariff.py 最上方的 SUMMER / NON_SUMMER 兩個 dict
+# 2. 先看會改什麼（dry run，不會寫檔）
+python tools/import_tariff.py
+# 3. 確認無誤後套用
+python tools/import_tariff.py --apply --effective-from 2026-04-01
+# 4. 驗證
+python -m app.data_check && python -m pytest tests/test_electricity_bill.py
+```
+
+`tests/test_tariff_import.py` 會檢查 JSON 與工具裡的費率表**永遠一致**，
+所以不會出現「改了工具但忘了改資料」的情況。
 
 ### 4.2 其他方案
 
@@ -740,7 +782,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
 
 ```bash
 python -m pytest -q
-# 525 passed
+# 535 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -756,7 +798,7 @@ python -m pytest -q
 幾個刻意設計的測試：
 
 - **電價不在程式碼裡**：`test_prices_live_in_json_not_in_code` 走訪 `app/` 下所有 `.py`，
-  確認 `1.68`、`8.46` 等費率沒有以數值常值寫死在程式中（只有說明文字可以提到）。
+  確認 `1.78`、`8.86` 等費率沒有以數值常值寫死在程式中（只有說明文字可以提到）。
   這個測試已用「故意寫死一個費率」驗證過會失敗。
 - **不會改到使用者資料**：`test_simulation.py::TestNonMutation` 對原始清單做
   `deepcopy` 比對，並驗證 `replace_with` 情境下原資料不變。
@@ -874,7 +916,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 525 passed
+python -m pytest                     # 應該 535 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -883,5 +925,5 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 525 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 525 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 535 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 535 passed，`/docs` 正常 |

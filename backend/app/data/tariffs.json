@@ -1,16 +1,23 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "currency": "TWD",
   "energy_unit": "kWh",
-  "updated_at": "2025-01-01",
+  "updated_at": "2025-10-01",
   "notes": [
     "VoltSpace tariff data is kept separate from the calculation code so that a tariff",
     "revision only requires editing this JSON file.",
     "Tier prices and the summer window follow Taiwan Power Company (Taipower) published",
-    "residential (non-business, metered-light) rates that have applied since 2024-04-01.",
-    "The 2025 electricity price review committee decided to freeze residential rates.",
+    "residential (non-business, metered-light) rates.",
+    "Rates are those of the Ministry of Economic Affairs adjustment that took effect on",
+    "2025-10-01 and apply through 2026: every tier rose by 0.10, with 701-1000 kWh up",
+    "0.20 and 1001 kWh and above up 0.40.",
+    "Previous table (2024-04-01 to 2025-09-30) for reference:",
+    "  summer     1.68 / 2.45 / 3.70 / 5.04 / 6.24 / 8.46",
+    "  non-summer 1.68 / 2.16 / 3.03 / 4.14 / 5.07 / 6.63",
     "Source: https://www.taipower.com.tw/ (Taipower electricity price tables)",
-    "       https://hc1.taipower.com.tw/1136/1149/2271/3119/normalPost",
+    "        https://www.taipower.com.tw/2289/2363/2388/2389/10735/normalPost",
+    "Worked example (published): 700 kWh in July = 1.78*120 + 2.55*210 + 3.80*170",
+    "  + 5.14*200 = 2,423.1 TWD. tests/test_electricity_bill.py asserts this.",
     "IMPORTANT: every price here is an ESTIMATE input, not a guarantee of the amount a",
     "user will be billed. Landlords of rented rooms often resell electricity at a flat",
     "rate (see flat_rate_resell_reference), so a real bill may differ from these tiers."
@@ -37,30 +44,30 @@
       "currency": "TWD",
       "unit": "kWh",
       "applicable_to": "Table-light non-business residential users (表燈非營業用)",
-      "effective_from": "2024-04-01",
-      "source": "Taipower residential electricity price table",
+      "effective_from": "2025-10-01",
+      "source": "Taipower residential electricity price table (MOEA 2025-10-01 adjustment)",
       "threshold_semantics": "per_billing_period",
       "supports_billing_months": true,
       "progressive": true,
       "seasons": {
         "summer": {
           "tiers": [
-            { "index": 1, "up_to_kwh": 120, "rate": 1.68, "label_zh": "120度以下部分" },
-            { "index": 2, "up_to_kwh": 330, "rate": 2.45, "label_zh": "121~330度部分" },
-            { "index": 3, "up_to_kwh": 500, "rate": 3.70, "label_zh": "331~500度部分" },
-            { "index": 4, "up_to_kwh": 700, "rate": 5.04, "label_zh": "501~700度部分" },
-            { "index": 5, "up_to_kwh": 1000, "rate": 6.24, "label_zh": "701~1000度部分" },
-            { "index": 6, "up_to_kwh": null, "rate": 8.46, "label_zh": "1001度以上部分" }
+            { "index": 1, "up_to_kwh": 120, "rate": 1.78, "label_zh": "120度以下部分" },
+            { "index": 2, "up_to_kwh": 330, "rate": 2.55, "label_zh": "121~330度部分" },
+            { "index": 3, "up_to_kwh": 500, "rate": 3.80, "label_zh": "331~500度部分" },
+            { "index": 4, "up_to_kwh": 700, "rate": 5.14, "label_zh": "501~700度部分" },
+            { "index": 5, "up_to_kwh": 1000, "rate": 6.44, "label_zh": "701~1000度部分" },
+            { "index": 6, "up_to_kwh": null, "rate": 8.86, "label_zh": "1001度以上部分" }
           ]
         },
         "non_summer": {
           "tiers": [
-            { "index": 1, "up_to_kwh": 120, "rate": 1.68, "label_zh": "120度以下部分" },
-            { "index": 2, "up_to_kwh": 330, "rate": 2.16, "label_zh": "121~330度部分" },
-            { "index": 3, "up_to_kwh": 500, "rate": 3.03, "label_zh": "331~500度部分" },
-            { "index": 4, "up_to_kwh": 700, "rate": 4.14, "label_zh": "501~700度部分" },
-            { "index": 5, "up_to_kwh": 1000, "rate": 5.07, "label_zh": "701~1000度部分" },
-            { "index": 6, "up_to_kwh": null, "rate": 6.63, "label_zh": "1001度以上部分" }
+            { "index": 1, "up_to_kwh": 120, "rate": 1.78, "label_zh": "120度以下部分" },
+            { "index": 2, "up_to_kwh": 330, "rate": 2.26, "label_zh": "121~330度部分" },
+            { "index": 3, "up_to_kwh": 500, "rate": 3.13, "label_zh": "331~500度部分" },
+            { "index": 4, "up_to_kwh": 700, "rate": 4.24, "label_zh": "501~700度部分" },
+            { "index": 5, "up_to_kwh": 1000, "rate": 5.27, "label_zh": "701~1000度部分" },
+            { "index": 6, "up_to_kwh": null, "rate": 7.03, "label_zh": "1001度以上部分" }
           ]
         }
       }
@@ -73,7 +80,7 @@
       "currency": "TWD",
       "unit": "kWh",
       "applicable_to": "Residential users who opted into a two-segment time-of-use contract",
-      "effective_from": "2024-04-01",
+      "effective_from": "2025-10-01",
       "source": "Taipower residential time-of-use electricity price table",
       "is_estimate": true,
       "estimate_note": "Time-of-use rates vary by contract capacity, season and peak/off-peak window; this simplified table is for education and comparison only.",

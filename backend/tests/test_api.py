@@ -282,15 +282,16 @@ class TestCostEndpoint:
         assert response.status_code == 200
         body = response.json()
         assert body["season"] == "summer"
-        assert body["total_amount"] == pytest.approx(2977.0, abs=0.5)
+        # Current table (2025-10-01): 1.78*120 + 2.55*210 + 3.80*170 + 5.14*200 + 6.44*100
+        assert body["total_amount"] == pytest.approx(3067.1)
         assert len(body["lines"]) == 5
-        assert body["lines"][0]["rate_per_kwh"] == 1.68
+        assert body["lines"][0]["rate_per_kwh"] == 1.78
         assert body["currency"] == "TWD"
 
     def test_non_summer_bill(self, client):
         body = client.post(self.URL, json={"consumption_kwh": 800, "month": 1}).json()
         assert body["season"] == "non_summer"
-        assert body["total_amount"] == pytest.approx(2505.3)
+        assert body["total_amount"] == pytest.approx(2595.3)
 
     def test_season_can_be_forced(self, client):
         body = client.post(self.URL, json={"consumption_kwh": 800, "season": "summer"}).json()
