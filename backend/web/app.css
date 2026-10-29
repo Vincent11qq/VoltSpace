@@ -138,6 +138,20 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .high-power { color: var(--warn); font-weight: 700; }
 
 .custom-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.custom-hint { margin: -2px 0 0; line-height: 1.4; }
+
+/* Shown for ~2s on the field whose value could not be parsed, so the toast can name
+   the field while the user can also see where it is. */
+.field-error {
+  outline: 2px solid var(--danger, #E74C3C);
+  outline-offset: 1px;
+  animation: field-shake .25s ease;
+}
+@keyframes field-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
 
 /* --- outlet --------------------------------------------------------------- */
 .centre { display: flex; flex-direction: column; gap: 16px; }

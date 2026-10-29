@@ -49,6 +49,9 @@ run_app.bat            # Windows：雙擊即可
 > 詳細的整合說明、三個成員的原始成果分別被怎麼處理，見
 > [`backend/docs/integration.md`](backend/docs/integration.md)。
 >
+> 想知道 backend 目前完成了哪些部分（含功能對照、測試、限制），見
+> [`docs/backend-status.md`](docs/backend-status.md)。
+>
 > 其他文件：[Supabase 整合](backend/docs/supabase.md)（選用）、
 > [程式碼審查紀錄](backend/docs/code-review-audit.md)、
 > [API 規格](backend/docs/openapi.json)。

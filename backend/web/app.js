@@ -72,6 +72,55 @@ function toast(message, isError = false) {
   toast._timer = setTimeout(() => (node.hidden = true), 3800);
 }
 
+/* ------------------------------------------------------- number input parsing */
+
+/* Users type units. "150W", "150 W", "1,200" and "150" all mean 150 watts, and a
+ * <input type="number"> refuses the first three with the browser's own
+ * "請輸入有效的值" tooltip, which says nothing about which field is wrong.
+ * So the fields are plain text and parsed here, with a message that names the field. */
+
+function parseNumber(raw) {
+  if (raw === null || raw === undefined) return null;
+  // Keep digits, a decimal point and a leading minus; drop units, spaces and commas.
+  const cleaned = String(raw)
+    .replace(/[,，\s]/g, "")
+    // A trailing unit ("150W", "150 瓦", "6小時", "110V") is ignored; anything after it is
+    // not part of the number either.
+    .replace(/(?:瓦|小時|度|時|天|日|台|個|w|v|h|a).*$/i, "")
+    .replace(/[^0-9.\-]/g, "");
+  if (cleaned === "" || cleaned === "-" || cleaned === ".") return null;
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Read a field, returning a value or showing a message that names the field.
+ * `label` is what the user sees; `hint` is the range, e.g. "0.1 到 100000".
+ */
+function readField(id, { label, hint, min, max, integer = false, fallback = null }) {
+  const raw = $(id).value;
+  if (String(raw).trim() === "") {
+    if (fallback !== null) return fallback;
+    toast(`請填「${label}」（${hint}）`, true);
+    return undefined;
+  }
+  let value = parseNumber(raw);
+  if (value === null) {
+    toast(`「${label}」請填數字，例如 ${hint}`, true);
+    return undefined;
+  }
+  if (integer) value = Math.round(value);
+  if (min !== undefined && value < min) {
+    toast(`「${label}」必須大於等於 ${min}`, true);
+    return undefined;
+  }
+  if (max !== undefined && value > max) {
+    toast(`「${label}」必須小於等於 ${max}`, true);
+    return undefined;
+  }
+  return value;
+}
+
 /* -------------------------------------------------------------------- setup */
 
 async function boot() {
@@ -472,20 +521,43 @@ function bindEvents() {
   });
   $("customForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    const item = {
-      name: $("cName").value.trim(),
-      category: null,
-      power_watts: Number($("cWatts").value),
-      hours_per_day: Number($("cHours").value),
-      days_per_month: Number($("cDays").value || 30),
-      quantity: Number($("cQty").value || 1),
-      voltage: Number($("cVolts").value || 110),
-      savedId: null,
-    };
-    if (!item.name || !(item.power_watts > 0)) {
-      toast("請填寫名稱與有效的功率", true);
+
+    const name = $("cName").value.trim();
+    if (!name) {
+      toast("請填「名稱」，例如 除濕機", true);
+      $("cName").focus();
       return;
     }
+
+    const watts = readField("cWatts", { label: "功率", hint: "150 或 150W", min: 0.1, max: 100000 });
+    if (watts === undefined) return describeFieldError("cWatts");
+
+    const volts = readField("cVolts", { label: "電壓", hint: "110 或 110V", min: 1, max: 1000, fallback: 110 });
+    if (volts === undefined) return describeFieldError("cVolts");
+
+    const hours = readField("cHours", { label: "每日小時", hint: "0 到 24，例 6", min: 0, max: 24 });
+    if (hours === undefined) return describeFieldError("cHours");
+
+    const days = readField("cDays", {
+      label: "每月天數", hint: "0 到 31", min: 0, max: 31, integer: true, fallback: 30,
+    });
+    if (days === undefined) return describeFieldError("cDays");
+
+    const qty = readField("cQty", {
+      label: "數量", hint: "1 到 999", min: 1, max: 999, integer: true, fallback: 1,
+    });
+    if (qty === undefined) return describeFieldError("cQty");
+
+    const item = {
+      name,
+      category: null,
+      power_watts: watts,
+      hours_per_day: hours,
+      days_per_month: days,
+      quantity: qty,
+      voltage: volts,
+      savedId: null,
+    };
     state.items.push(item);
     $("customForm").reset();
     $("cVolts").value = "110";
@@ -494,6 +566,16 @@ function bindEvents() {
     $("customForm").hidden = true;
     refresh();
   });
+}
+
+/** Highlight the field that failed so the message is easy to act on. */
+function describeFieldError(id) {
+  const node = $(id);
+  if (!node) return;
+  node.classList.add("field-error");
+  node.focus();
+  node.select?.();
+  setTimeout(() => node.classList.remove("field-error"), 2000);
 }
 
 async function andThenClearSaved() {

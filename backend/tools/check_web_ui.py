@@ -68,9 +68,11 @@ def main() -> int:
     parser.feed(index)
     html_ids = set(parser.ids)
 
-    # Every $("x") / getElementById("x") in the script must exist in the HTML.
+    # Every $("x") / getElementById("x") / readField("x") in the script must exist in
+    # the HTML. readField is the tolerant number reader, so it counts as a use.
     script_ids = set(re.findall(r'\$\("([^"]+)"\)', script))
     script_ids |= set(re.findall(r'getElementById\("([^"]+)"\)', script))
+    script_ids |= set(re.findall(r'readField\("([^"]+)"', script))
 
     missing = sorted(script_ids - html_ids)
     # Ids present in HTML but never used are only worth noting.
