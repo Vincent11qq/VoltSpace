@@ -904,9 +904,26 @@ async def api_index() -> dict[str, Any]:
 # --- The web UI --------------------------------------------------------------
 # Mounted last so it never shadows an API route. ``/`` serves index.html; the assets live
 # under ``/app`` so they cannot collide with API paths.
+
+# The frontend has no build step, so filenames never change and there is no content hash
+# to bust a cache. Without an explicit header a browser applies *heuristic* freshness from
+# Last-Modified and keeps serving an old app.js/index.html - which looks exactly like "my
+# change did not appear". Say no-cache so every load revalidates (cheap: a 304 with ETag).
+NO_CACHE = {"Cache-Control": "no-cache, must-revalidate"}
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles that always revalidates, for an unbuilt frontend."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.update(NO_CACHE)
+        return response
+
+
 if WEB_DIR.is_dir():
-    app.mount("/app", StaticFiles(directory=WEB_DIR), name="app-assets")
+    app.mount("/app", NoCacheStaticFiles(directory=WEB_DIR), name="app-assets")
 
     @app.get("/", include_in_schema=False)
     async def ui_index() -> FileResponse:
-        return FileResponse(WEB_DIR / "index.html")
+        return FileResponse(WEB_DIR / "index.html", headers=NO_CACHE)

@@ -67,6 +67,24 @@ class TestServiceEndpoints:
         assert css.status_code == 200 and len(css.text) > 500
         assert js.status_code == 200 and len(js.text) > 500
 
+    def test_ui_is_not_cached_by_the_browser(self, client):
+        """The page and its assets must revalidate on every load.
+
+        This frontend has no build step, so filenames never change. Without an explicit
+        Cache-Control a browser applies heuristic freshness from Last-Modified and keeps
+        serving the previous app.js - which looks exactly like a change that never
+        appeared (it happened: the language button was missing from a cached page).
+        """
+
+        for path in ("/", "/app/app.js", "/app/app.css"):
+            response = client.get(path)
+            assert response.status_code == 200, path
+            cache_control = response.headers.get("cache-control", "")
+            assert "no-cache" in cache_control, (
+                f"{path} is served without Cache-Control: no-cache, so a stale copy can "
+                f"be reused (got {cache_control!r})"
+            )
+
     def test_ui_html_and_js_agree_on_element_ids(self):
         """A missing element id would show up only as a silently broken page.
 

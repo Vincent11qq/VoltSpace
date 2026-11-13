@@ -20,6 +20,10 @@
       </div>
     </div>
     <div class="header-right">
+      <!-- Language switcher, first in the group so it is easy to find. app.js sets the
+           label to the language you can switch TO. -->
+      <button id="langToggle" class="lang-btn" type="button"
+              data-i18n-title="lang.title" title="Switch to English">EN</button>
       <label class="field inline">
         <span class="label" data-i18n="label.plan">電價方案</span>
         <select id="plan"></select>
@@ -28,9 +32,6 @@
         <span class="label" data-i18n="label.month">月份</span>
         <select id="month"></select>
       </label>
-      <!-- Language switcher: app.js sets the label to the language you can switch TO. -->
-      <button id="langToggle" class="lang-btn" type="button"
-              data-i18n-title="lang.title" title="Switch to English">EN</button>
       <span id="conn" class="pill" data-i18n-title="conn.title" title="後端連線狀態"
             data-i18n="conn.checking">連線中…</span>
     </div>

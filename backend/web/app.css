@@ -38,23 +38,28 @@ h2 { font-size: 15px; margin: 0 0 10px; }
 .centre-title { text-align: center; }
 
 /* --- language switcher ---------------------------------------------------- */
-/* Sits with the header controls; the label is the language you can switch TO, so it is
-   short on purpose ("EN" / "中文"). */
+/* Sits first in the header controls. The label is the language you can switch TO, so it
+   stays short ("EN" / "中文"). It carries an accent outline so it reads as a control and
+   not as another status pill. */
 .lang-btn {
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: .02em;
   line-height: 1;
-  padding: 7px 11px;
-  border: none;
+  padding: 8px 13px;
+  border: 1px solid var(--accent);
   border-radius: 999px;
   cursor: pointer;
-  color: var(--ink);
+  color: var(--accent);
   background: var(--bg);
   box-shadow: var(--shadow-out);
-  transition: box-shadow .15s ease, color .15s ease;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
-.lang-btn:hover { color: var(--accent, #4a90e2); }
+.lang-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
 .lang-btn:active,
 .lang-btn:focus-visible {
   box-shadow: var(--shadow-in);
