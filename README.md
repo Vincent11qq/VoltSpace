@@ -46,6 +46,10 @@ run_app.bat            # Windows：雙擊即可
 | <http://127.0.0.1:8000/docs> | Swagger 互動式 API 文件 |
 | <http://127.0.0.1:8000/health> | 健康檢查 |
 
+**介面支援中／英切換**：右上角的 `EN` / `中文` 按鈕，選擇會存在瀏覽器裡（`localStorage`）。
+所有文字都由後端提供兩種語言 —— 家電名稱、迴路名稱、電價方案、節電建議、
+警告與免責聲明都有 `_zh` / `_en` 兩份，前端只負責挑選。缺英文時會退回中文，**不會空白**。
+
 > 詳細的整合說明、三個成員的原始成果分別被怎麼處理，見
 > [`backend/docs/integration.md`](backend/docs/integration.md)。
 >

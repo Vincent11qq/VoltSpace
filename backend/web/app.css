@@ -37,6 +37,30 @@ h2 { font-size: 15px; margin: 0 0 10px; }
 .small { font-size: 12px; }
 .centre-title { text-align: center; }
 
+/* --- language switcher ---------------------------------------------------- */
+/* Sits with the header controls; the label is the language you can switch TO, so it is
+   short on purpose ("EN" / "中文"). */
+.lang-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 11px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--bg);
+  box-shadow: var(--shadow-out);
+  transition: box-shadow .15s ease, color .15s ease;
+}
+.lang-btn:hover { color: var(--accent, #4a90e2); }
+.lang-btn:active,
+.lang-btn:focus-visible {
+  box-shadow: var(--shadow-in);
+  outline: none;
+}
+
 /* --- cards ---------------------------------------------------------------- */
 .card {
   background: var(--bg-raised);
