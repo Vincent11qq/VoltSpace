@@ -1,89 +1,95 @@
 -- ===========================================================================
--- VoltSpace — database schema (Supabase / PostgreSQL)
+-- VoltSpace — Supabase schema
 --
--- Run this in the Supabase SQL editor. It is idempotent, so re-running it is safe.
+-- This file describes the database the running app actually uses. It is written to be
+-- **safe to run on the live project**: every statement is idempotent
+-- (CREATE TABLE IF NOT EXISTS, DROP POLICY IF EXISTS before CREATE POLICY), so running
+-- it twice, or running it on the existing project, only refreshes the policies.
 --
--- WHY THIS REPLACES THE ORIGINAL FILES
--- ------------------------------------
--- The first version (appliances.sql / profiles.sql / security.sql / connect.sql) was
--- written before the calculation API existed, and the two did not agree:
+-- Layout: exactly two tables.
+--   profiles    one row per signed-in user (created by a trigger on sign-up)
+--   appliances  the saved household
 --
---   1. Column names/types differed from the API contract:
---        old: Power integer, Minutes numeric, Appliance text
---        API: power_watts, hours_per_day, days_per_month, quantity, voltage
---      Member B's own validation also used minutes, while the calculators work in
---      hours, so every stored row would have needed conversion in the frontend.
---   2. There was no tariff table, even though the bill calculator needs one.
---   3. The row-level-security policies were `to authenticated` with
---      `auth.uid() = user_id`, but the frontend has no sign-in flow, so every request
---      was anonymous -> `auth.uid()` is NULL -> inserts and reads both failed.
---      A schema that only works for a signed-in user needs the app to have sign-in.
+-- Electricity prices are NOT stored here. The backend reads app/data/tariffs.json,
+-- because it has to work offline. If you also want the prices in the database (for the
+-- mobile client or for Member B's tooling), run optional-tariff-plans.sql separately.
 --
--- This file keeps the good ideas (user-owned rows, RLS on everything) and fixes the
--- three problems: the columns now match the API exactly, a tariffs table exists, and a
--- `households` table is added so an anonymous device can still save its own data safely.
--- See docs/supabase.md for how to switch the backend from local SQLite to Supabase.
+-- Run me in: Supabase dashboard -> SQL Editor.
+--
+-- HISTORY: this aligns with Member B's 2026-11-13 version (Supabase/member-b-latest/),
+-- which is what the live project was created from. The earlier draft of this file used a
+-- `user_id` column that the live table does not have, which made it unsafe to re-run.
 -- ===========================================================================
 
 -- ---------------------------------------------------------------------------
--- 1. Profiles (one row per auth user)
+-- 1. Tables
 -- ---------------------------------------------------------------------------
+
+-- One row per user. `id` is the auth user id, so the table is keyed by identity rather
+-- than by a separate surrogate key.
 create table if not exists public.profiles (
-    id         uuid primary key references auth.users (id) on delete cascade,
-    name       text,
-    created_at timestamptz not null default now()
+    id          uuid primary key references auth.users (id) on delete cascade,
+    email       text,
+    full_name   text,
+    avatar_url  text,
+    created_at  timestamptz default now(),
+    updated_at  timestamptz default now()
 );
 
-comment on table public.profiles is 'Display name for each authenticated user.';
+comment on table public.profiles is
+    'Display data per user. Created automatically by handle_new_user().';
 
--- Create a profile automatically when a user signs up.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-    insert into public.profiles (id, name)
-    values (new.id, coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)))
-    on conflict (id) do nothing;
-    return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-    after insert on auth.users
-    for each row execute function public.handle_new_user();
-
--- ---------------------------------------------------------------------------
--- 2. Appliances
+-- The saved household.
 --
--- One row per appliance in a user's household. Column names and units mirror
--- `ApplianceIn` in app/schemas.py exactly so there is no translation layer:
--- power is watts, usage is HOURS per day, days is per month.
--- ---------------------------------------------------------------------------
+-- Column names and units mirror `ApplianceIn` in app/schemas.py exactly, so there is no
+-- translation layer between the API and the database:
+--   power_watts    watts
+--   hours_per_day  HOURS per day (NOT minutes)
+--   days_per_month days of use per month
+--
+-- `household_id` groups rows. It is a plain uuid with no foreign key: this backend serves
+-- one household, the value comes from VOLTSPACE_HOUSEHOLD_ID, and access uses the
+-- service_role key.
+--
+-- The CHECK constraints below apply to freshly created tables. The current live project
+-- was created before them, so its table has none - the API validates first either way
+-- (app/calculators/consumption.py), and every write goes through it.
 create table if not exists public.appliances (
-    id             bigint generated always as identity primary key,
-    user_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
-    name           text not null check (length(btrim(name)) between 1 and 80),
-    category       text check (category is null or length(category) <= 40),
-    power_watts    numeric(10, 2) not null check (power_watts > 0 and power_watts <= 100000),
-    hours_per_day  numeric(5, 2)  not null check (hours_per_day >= 0 and hours_per_day <= 24),
-    days_per_month integer        not null default 30 check (days_per_month between 0 and 31),
-    quantity       integer        not null default 1  check (quantity between 1 and 999),
-    voltage        numeric(6, 2)  default 110 check (voltage is null or voltage > 0),
-    power_factor   numeric(3, 2)  check (power_factor is null or power_factor between 0.1 and 1.0),
-    created_at     timestamptz not null default now(),
-    updated_at     timestamptz not null default now()
+    id             bigint generated by default as identity primary key,
+
+    name           text    not null,
+    category       text,
+
+    power_watts    double precision not null,
+    hours_per_day  double precision not null,
+
+    days_per_month integer not null default 30,
+    quantity       integer not null default 1,
+
+    voltage        double precision,
+    power_factor   double precision,
+
+    household_id   uuid,
+
+    created_at     timestamptz default now(),
+    updated_at     timestamptz default now(),
+
+    constraint appliances_name_len       check (char_length(btrim(name)) between 1 and 80),
+    constraint appliances_power_positive check (power_watts > 0),
+    constraint appliances_hours_range    check (hours_per_day >= 0 and hours_per_day <= 24),
+    constraint appliances_days_range     check (days_per_month between 0 and 31),
+    constraint appliances_qty_range      check (quantity between 1 and 999),
+    constraint appliances_pf_range       check (power_factor is null
+                                                or (power_factor >= 0.1 and power_factor <= 1.0))
 );
 
 comment on table public.appliances is
-    'A user''s saved appliances. Units match the calculation API (W, hours/day).';
+    'Saved appliances. Units match the calculation API (W, hours per day).';
 
-create index if not exists appliances_user_id_idx on public.appliances (user_id);
+create index if not exists idx_appliances_household
+    on public.appliances (household_id);
 
--- Keep updated_at honest without relying on the client.
+-- Keep updated_at honest without trusting the client.
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -100,77 +106,52 @@ create trigger appliances_touch_updated_at
     for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 3. Tariffs
+-- 2. Create a profile automatically on sign-up
+-- ---------------------------------------------------------------------------
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+    insert into public.profiles (id, email, full_name)
+    values (
+        new.id,
+        new.email,
+        new.raw_user_meta_data ->> 'full_name'
+    )
+    on conflict (id) do nothing;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+    after insert on auth.users
+    for each row execute function public.handle_new_user();
+
+-- ---------------------------------------------------------------------------
+-- 3. Row level security
 --
--- Mirrors app/data/tariffs.json so the tariff data lives in one shape. The backend
--- keeps reading the JSON file (it must work offline); this table exists so Member B can
--- manage plans in the database and so the mobile client can read the same numbers.
--- ---------------------------------------------------------------------------
-create table if not exists public.tariff_plans (
-    id           text primary key,
-    name_zh      text not null,
-    name_en      text,
-    type         text not null check (type in ('tiered', 'time_of_use', 'flat')),
-    currency     text not null default 'TWD',
-    unit         text not null default 'kWh',
-    effective_from date,
-    is_estimate  boolean not null default false,
-    data         jsonb   not null,
-    created_at   timestamptz not null default now()
-);
-
-comment on table public.tariff_plans is
-    'Electricity plans. `data` holds the season/tier structure copied from tariffs.json.';
-
--- Public read: tariff data is not user-specific and the UI needs it before sign-in.
-alter table public.tariff_plans enable row level security;
-
-drop policy if exists "Tariffs are readable by everyone" on public.tariff_plans;
-create policy "Tariffs are readable by everyone"
-    on public.tariff_plans for select
-    to anon, authenticated
-    using (true);
-
--- ---------------------------------------------------------------------------
--- 4. Households
+-- Both tables are closed by default: a policy must grant access. Note the split:
 --
--- Why: the app supports anonymous use (a student opens it and types their appliances).
--- `auth.uid()` is NULL for those users, so `appliances.user_id` cannot be the only key.
--- A household row carries a random access token; the device keeps the token and sends it
--- in a header. Signed-in users additionally get their household linked to their account.
--- ---------------------------------------------------------------------------
-create table if not exists public.households (
-    id           uuid primary key default gen_random_uuid(),
-    owner_id     uuid references auth.users (id) on delete set null default auth.uid(),
-    access_token uuid not null default gen_random_uuid(),
-    label        text,
-    created_at   timestamptz not null default now()
-);
-
-comment on table public.households is
-    'A saved appliance collection. access_token lets an anonymous device own its data.';
-
-create index if not exists households_owner_idx on public.households (owner_id);
-create unique index if not exists households_token_idx on public.households (access_token);
-
-alter table public.appliances
-    add column if not exists household_id uuid references public.households (id) on delete cascade;
-
-create index if not exists appliances_household_idx on public.appliances (household_id);
-
--- ---------------------------------------------------------------------------
--- 5. Row level security
+--   * a signed-in user (role `authenticated`) reaches only their own rows, because
+--     `household_id` / `id` is compared with auth.uid();
+--   * the backend has no login flow, so it connects with the service_role key, which
+--     bypasses RLS by design. Keep that key on the server, never in a client.
 --
--- Two ways to own a row:
---   * signed in  -> owner_id / user_id equals auth.uid()
---   * anonymous  -> the request carries a household access token (checked by the
---                   backend with the service key; anon clients never get service rights)
+-- Consequence worth knowing: `household_id` doubles as the owner id, so a row belongs to
+-- the user whose uuid it carries. Several households per user would need a separate
+-- households table.
 -- ---------------------------------------------------------------------------
-alter table public.profiles enable row level security;
-alter table public.households enable row level security;
+
+alter table public.profiles   enable row level security;
 alter table public.appliances enable row level security;
 
--- profiles: a user sees and edits only their own row.
+-- profiles: read and edit only your own row.
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
     on public.profiles for select to authenticated
@@ -182,90 +163,48 @@ create policy "profiles_update_own"
     using ((select auth.uid()) = id)
     with check ((select auth.uid()) = id);
 
+-- Installations that rely on the trigger rather than an INSERT policy still work,
+-- because the trigger runs as its owner (security definer).
 drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own"
     on public.profiles for insert to authenticated
     with check ((select auth.uid()) = id);
 
--- households: the owner can read/update; creation is allowed while signed in.
-drop policy if exists "households_select_own" on public.households;
-create policy "households_select_own"
-    on public.households for select to authenticated
-    using ((select auth.uid()) = owner_id);
-
-drop policy if exists "households_insert_own" on public.households;
-create policy "households_insert_own"
-    on public.households for insert to authenticated
-    with check (owner_id is null or (select auth.uid()) = owner_id);
-
-drop policy if exists "households_update_own" on public.households;
-create policy "households_update_own"
-    on public.households for update to authenticated
-    using ((select auth.uid()) = owner_id)
-    with check ((select auth.uid()) = owner_id);
-
-drop policy if exists "households_delete_own" on public.households;
-create policy "households_delete_own"
-    on public.households for delete to authenticated
-    using ((select auth.uid()) = owner_id);
-
--- appliances: signed-in users own their rows. Anonymous households are served by the
--- backend using the service key (which bypasses RLS by design, and is never shipped to
--- a client), so no anon policy is granted here.
-drop policy if exists "All users are allowed to view information" on public.appliances;
-drop policy if exists "All users are allowed to insert information" on public.appliances;
-drop policy if exists "All users are allowed to update information" on public.appliances;
-drop policy if exists "All users are allowed to delete information" on public.appliances;
-
+-- appliances: full CRUD, scoped to the household uuid.
 drop policy if exists "appliances_select_own" on public.appliances;
 create policy "appliances_select_own"
     on public.appliances for select to authenticated
-    using ((select auth.uid()) = user_id);
+    using (household_id = (select auth.uid()));
 
 drop policy if exists "appliances_insert_own" on public.appliances;
 create policy "appliances_insert_own"
     on public.appliances for insert to authenticated
-    with check ((select auth.uid()) = user_id);
+    with check (household_id = (select auth.uid()));
 
 drop policy if exists "appliances_update_own" on public.appliances;
 create policy "appliances_update_own"
     on public.appliances for update to authenticated
-    using ((select auth.uid()) = user_id)
-    with check ((select auth.uid()) = user_id);
+    using (household_id = (select auth.uid()))
+    with check (household_id = (select auth.uid()));
 
 drop policy if exists "appliances_delete_own" on public.appliances;
 create policy "appliances_delete_own"
     on public.appliances for delete to authenticated
-    using ((select auth.uid()) = user_id);
+    using (household_id = (select auth.uid()));
 
 -- ---------------------------------------------------------------------------
--- 6. Seed the tariff plans (matches app/data/tariffs.json)
+-- 4. Grants
 --
--- NOTE: the backend always calculates from app/data/tariffs.json, because it must work
--- offline. These rows exist so the mobile client and Member B's tooling can read the same
--- numbers. Keep them in sync: rates below are the MOEA adjustment effective 2025-10-01
--- (summer 1.78/2.55/3.80/5.14/6.44/8.86, non-summer 1.78/2.26/3.13/4.24/5.27/7.03).
+-- RLS filters rows; GRANT decides whether the role may touch the table at all. Both are
+-- needed. `anon` gets nothing: there is no policy for it.
 -- ---------------------------------------------------------------------------
-insert into public.tariff_plans (id, name_zh, name_en, type, effective_from, data)
-values
-    ('tw_residential_tiered',
-     '台電住宅用電－累進（級距）電價',
-     'Taipower residential - progressive (tiered) rate',
-     'tiered', date '2025-10-01',
-     '{"seasons": {"summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.78},{"index":2,"up_to_kwh":330,"rate":2.55},{"index":3,"up_to_kwh":500,"rate":3.80},{"index":4,"up_to_kwh":700,"rate":5.14},{"index":5,"up_to_kwh":1000,"rate":6.44},{"index":6,"up_to_kwh":null,"rate":8.86}]}, "non_summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.78},{"index":2,"up_to_kwh":330,"rate":2.26},{"index":3,"up_to_kwh":500,"rate":3.13},{"index":4,"up_to_kwh":700,"rate":4.24},{"index":5,"up_to_kwh":1000,"rate":5.27},{"index":6,"up_to_kwh":null,"rate":7.03}]}}}'::jsonb),
-    ('tw_residential_tou',
-     '台電住宅用電－時間電價（二段式，估算）',
-     'Taipower residential - time-of-use (two-segment, estimated)',
-     'time_of_use', date '2025-10-01',
-     '{"seasons": {"summer": {"peak": 5.16, "off_peak": 2.13}, "non_summer": {"peak": 5.16, "off_peak": 1.90}}}'::jsonb),
-    ('flat_rate_resell_reference',
-     '單一費率參考（租屋常見房東轉售價）',
-     'Flat-rate reference (typical rented-room resale price)',
-     'flat', date '2025-01-01',
-     '{"seasons": {"summer": {"rate": 5.5}, "non_summer": {"rate": 5.5}}}'::jsonb)
-on conflict (id) do update
-    set name_zh = excluded.name_zh,
-        name_en = excluded.name_en,
-        type = excluded.type,
-        effective_from = excluded.effective_from,
-        data = excluded.data;
+
+create extension if not exists "pgcrypto";
+
+grant usage on schema public to authenticated;
+
+grant select, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.appliances to authenticated;
+
+-- Tell PostgREST to pick up the changes without waiting for a restart.
+notify pgrst, 'reload schema';

@@ -15,26 +15,35 @@ VoltSpace 預設把家電存在**本地 SQLite**（`backend/.data/voltspace.db`�
 
 在 Supabase 專案的 **SQL Editor** 貼上並執行 [`../db/schema.sql`](../db/schema.sql)。
 
-這份檔案是可重複執行的，會建立：
+這份檔案是**可重複執行**的（`create table if not exists`、`drop policy if exists`），
+而且**與目前線上專案一致** —— 在現有專案上再跑一次也只會重建政策，不會壞掉。
+
+它會建立兩張表：
 
 | 資料表 | 用途 |
 | --- | --- |
-| `profiles` | 使用者顯示名稱（註冊時自動建立） |
+| `profiles` | 使用者顯示資料（註冊時由 trigger 自動建立） |
 | `appliances` | 家電清單，**欄位與計算 API 完全一致** |
-| `tariff_plans` | 電價方案（已預先寫入三個方案，內容來自 `app/data/tariffs.json`） |
-| `households` | 家電集合，帶 `access_token` 讓匿名裝置也能擁有資料 |
 
-### 與原始 SQL 的差異（以及為什麼）
+**電價不在資料庫裡**：後端一律讀 `app/data/tariffs.json`（要能離線執行）。
+若你也想把電價放進資料庫（例如給手機端直接讀），另外執行
+[`../db/optional-tariff-plans.sql`](../db/optional-tariff-plans.sql)，那是選用的。
 
-原本的 `appliances.sql` / `security.sql` 有三個問題，這份 schema 已修正：
+### 與最初 SQL 的差異
+
+Member B 最初交的 `appliances.sql` / `security.sql` 有兩個問題：
 
 1. **欄位名稱／單位不同** — 舊版是 `Power` / `Minutes` / `Appliance`；
-   計算核心用 `power_watts` / `hours_per_day` / `name`。
-   現在資料庫欄位就是 API 欄位，不需要任何轉換。
-2. **沒有電價表** — 電費計算需要級距資料，現在有 `tariff_plans`。
-3. **RLS 政策只給 `authenticated`** — 但前端沒有登入流程，匿名請求的
-   `auth.uid()` 是 `NULL`，因此新增／讀取都會被拒絕。
-   現在改用 `households.access_token`，讓匿名裝置也能安全地讀寫自己的資料。
+   計算核心用 `power_watts` / `hours_per_day` / `name`。已對齊。
+2. **RLS 政策與登入流程不匹配** — 政策只給 `authenticated`，但前端沒有登入流程，
+   匿名請求的 `auth.uid()` 是 `NULL`，所以讀寫都會被拒絕。
+
+第 2 點的處理方式是：**後端用 `service_role` key**（繞過 RLS），
+而不是另外設計匿名 token 機制（早期版本的 `households.access_token` 方案已移除）。
+若之後加入登入流程，就可以改用 anon key，RLS 會依 `household_id = auth.uid()` 隔離。
+
+> **驗證**：`python tools/check_schema_match.py`（需設定 Supabase 環境變數）
+> 會比對 `schema.sql` 的欄位與線上實際的表，並確認沒有任何政策引用不存在的欄位。
 
 ---
 
@@ -148,12 +157,14 @@ Adapter 會在第一次連線時偵測欄位：
 ## 5. 注意事項
 
 - **不要把 service role key 放進前端**。它會繞過所有 RLS。
-- **專案被刪除或閒置太久，DNS 會消失**，連線會失敗。判斷方法：
-  `python tools/supabase_doctor.py` 的 DNS 檢查會顯示
-  `DNS does not resolve`。這時只能建新專案。
+- **專案閒置太久會被暫停**（免費方案），暫停期間 DNS 可能解析不到，連線就失敗。
+  判斷方法：`python tools/supabase_doctor.py` 的 DNS 檢查會顯示 `DNS does not resolve`。
+  到 dashboard 還原（resume）即可，**網址不會變**。
+  （2026-11 就發生過一次：同一個 ref 先 NXDOMAIN、還原後恢復正常。）
 - Supabase 的免費方案會休眠，冷啟動可能要幾秒；本地 SQLite 沒有這個問題。
 - **`replace_appliances`（前端「儲存全部」）不是交易性的**：它先 DELETE 再 INSERT，
   如果 INSERT 失敗，該戶的家電會是空的。SQLite 版本有交易保護，Supabase 版本沒有。
-- 電價資料有兩份（`app/data/tariffs.json` 與 `tariff_plans` 表）。
-  **目前計算一律以 JSON 為準**（後端要能離線執行）；`schema.sql` 的 seed
-  已同步成 2025-10-01 的費率，若你改了資料庫的費率，記得也改 JSON。
+- **DELETE 一定要帶條件**：PostgREST 會拒絕沒有 WHERE 的 DELETE（錯誤 21000）。
+  adapter 在沒有設定 `VOLTSPACE_HOUSEHOLD_ID` 時會用 `id=gte.0` 明確匹配全部。
+- 電價資料在 `app/data/tariffs.json`（**唯一的計算來源**）。
+  若你也執行了 `optional-tariff-plans.sql`，記得兩邊同步。
