@@ -40,10 +40,18 @@ class Node {
     this.value = '';
     this.hidden = false;
     this.className = '';
+    this.listeners = {};
   }
   append(...nodes) { for (const n of nodes) this.children.push(n); }
   appendChild(n) { this.children.push(n); return n; }
-  addEventListener() {}
+  addEventListener(type, fn) {
+    (this.listeners[type] = this.listeners[type] || []).push(fn);
+  }
+  fire(type, event) {
+    const handlers = this.listeners[type] || [];
+    for (const fn of handlers) fn(event || { target: this });
+    return handlers.length;
+  }
   setAttribute(k, v) { this.attributes[k] = v; }
   focus() {}
   select() {}
@@ -92,7 +100,7 @@ global.clearTimeout = () => 0;
 // --- load the real file ----------------------------------------------------
 // argv[1] is this stub, argv[2] is app.js.
 const source = fs.readFileSync(process.argv[2], 'utf8');
-eval(source + '\n;globalThis.__v = { setLanguage, t, pick, monthLabel,'
+eval(source + '\n;globalThis.__v = { setLanguage, t, pick, monthLabel, bindEvents,'
   + ' get LANG() { return LANG; } };');
 
 const V = globalThis.__v;
@@ -130,6 +138,29 @@ out.fallback = {
   missingZh: V.pick(undefined, 'English only'),
   missingBoth: V.pick(undefined, undefined),
 };
+
+// --- the actual complaint: clicking the button does nothing ----------------
+// Wire the real handlers, then fire the click the user would make.
+V.setLanguage('zh');
+V.bindEvents();
+
+const button = registry.get('langToggle');
+out.click = {
+  handlers: (button.listeners.click || []).length,
+  before: button.textContent,
+  langBefore: V.LANG,
+};
+const fired = button.fire('click');
+out.click.fired = fired;
+out.click.after = button.textContent;
+out.click.langAfter = V.LANG;
+out.click.documentLangAfter = global.document.documentElement.lang;
+out.click.taglineAfter = V.t('brand.tagline');
+
+// Click again: it must toggle back.
+button.fire('click');
+out.click.backTo = V.LANG;
+out.click.backLabel = button.textContent;
 
 process.stdout.write(JSON.stringify(out));
 """
@@ -195,7 +226,21 @@ def problems(data: dict) -> list[str]:
     fallback = data.get("fallback", {})
     check(fallback.get("missingEn") == "只有中文", "missing English must fall back to Chinese")
     check(fallback.get("missingZh") == "English only", "missing Chinese must fall back to English")
-    check(not str(fallback.get("missingBoth") or "").strip() is None, "fallback guard")
+
+    # The user-visible behaviour: clicking the button must actually switch the language.
+    click = data.get("click", {})
+    check(click.get("handlers", 0) >= 1, "no click handler is attached to the language button")
+    check(click.get("fired", 0) >= 1, "the click handler was not invoked")
+    check(click.get("langBefore") == "zh", "the click test should start in Chinese")
+    check(click.get("after") != click.get("before"), "the button label did not change")
+    check(click.get("langAfter") == "en", "clicking did not switch the language")
+    check(click.get("documentLangAfter") == "en", "clicking did not update <html lang>")
+    check(
+        click.get("taglineAfter") == data["en"].get("tagline"),
+        "clicking did not translate the page text",
+    )
+    check(click.get("backTo") == "zh", "clicking twice did not switch back")
+    check(click.get("backLabel") == "EN", "the button label did not return to EN")
 
     return issues
 
@@ -222,13 +267,22 @@ def main() -> int:
     for key, value in data["fallback"].items():
         print(f"  {key:14} {value}")
 
+    click = data.get("click", {})
+    print("\n--- clicking the language button ---")
+    print(f"  handlers       {click.get('handlers')}")
+    print(f"  label          {click.get('before')!r} -> {click.get('after')!r}")
+    print(f"  language       {click.get('langBefore')} -> {click.get('langAfter')}")
+    print(f"  <html lang>    {click.get('documentLangAfter')}")
+    print(f"  tagline        {click.get('taglineAfter')}")
+    print(f"  click again    -> {click.get('backTo')} ({click.get('backLabel')!r})")
+
     print()
     if issues:
         print(f"{len(issues)} problem(s):")
         for issue in issues:
             print("  -", issue)
         return 1
-    print("both languages render, and missing translations fall back instead of blanking")
+    print("both languages render, the button switches them, and missing text falls back")
     return 0
 
 

@@ -222,6 +222,23 @@ class TestRenderedOutput:
     def test_no_reported_problems(self, rendered):
         assert _checker().problems(rendered) == []
 
+    def test_clicking_the_button_switches_the_language(self, rendered):
+        """The user-visible behaviour: the toggle must do something when clicked."""
+
+        click = rendered["click"]
+        assert click["handlers"] >= 1, "no click handler attached"
+        assert click["fired"] >= 1, "the handler never ran"
+        assert click["before"] == "EN"
+        assert click["after"] == "中文", "the label did not change"
+        assert click["langAfter"] == "en"
+        assert click["documentLangAfter"] == "en"
+        assert click["taglineAfter"] == rendered["en"]["tagline"]
+
+    def test_clicking_again_switches_back(self, rendered):
+        click = rendered["click"]
+        assert click["backTo"] == "zh"
+        assert click["backLabel"] == "EN"
+
 
 class TestBackendEnglishThroughHttp:
     """The English text must survive the response model.

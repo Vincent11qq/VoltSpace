@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import Body, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -911,6 +911,21 @@ async def api_index() -> dict[str, Any]:
 # change did not appear". Say no-cache so every load revalidates (cheap: a 304 with ETag).
 NO_CACHE = {"Cache-Control": "no-cache, must-revalidate"}
 
+# Files whose modification time versions the asset URLs. Any edit changes the query
+# string, so a browser cannot pair new HTML with an old cached app.js - which is exactly
+# how the language button appeared without working.
+VERSIONED_ASSETS = ("index.html", "app.js", "app.css")
+
+
+def asset_version() -> str:
+    latest = 0
+    for name in VERSIONED_ASSETS:
+        try:
+            latest = max(latest, int((WEB_DIR / name).stat().st_mtime_ns))
+        except OSError:
+            continue
+    return str(latest)
+
 
 class NoCacheStaticFiles(StaticFiles):
     """StaticFiles that always revalidates, for an unbuilt frontend."""
@@ -925,5 +940,9 @@ if WEB_DIR.is_dir():
     app.mount("/app", NoCacheStaticFiles(directory=WEB_DIR), name="app-assets")
 
     @app.get("/", include_in_schema=False)
-    async def ui_index() -> FileResponse:
-        return FileResponse(WEB_DIR / "index.html", headers=NO_CACHE)
+    async def ui_index() -> HTMLResponse:
+        # Rendered rather than served as a file, so __ASSET_VERSION__ can be filled in.
+        html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(
+            html.replace("__ASSET_VERSION__", asset_version()), headers=NO_CACHE
+        )
