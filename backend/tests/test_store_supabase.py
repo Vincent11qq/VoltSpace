@@ -68,13 +68,32 @@ class FakePostgrest:
 
         rows = list(self.rows)
 
-        # filters
+        # filters. PostgREST supports more operators than `eq`; the adapter needs `gte`
+        # for its explicit "match everything" delete filter.
+        saw_filter = False
         for key, value in params.multi_items():
             if key in {"select", "order", "limit"}:
                 continue
+            saw_filter = True
             if value.startswith("eq."):
                 target = value[3:]
                 rows = [row for row in rows if str(row.get(key)) == str(target)]
+            elif value.startswith("gte."):
+                floor = float(value[4:])
+                rows = [row for row in rows if float(row.get(key, 0)) >= floor]
+            elif value.startswith("neq."):
+                target = value[4:]
+                rows = [row for row in rows if str(row.get(key)) != str(target)]
+
+        # Faithful to the real server: an unfiltered DELETE is rejected with 21000.
+        if method == "DELETE" and not saw_filter:
+            return httpx.Response(
+                400,
+                json={
+                    "code": "21000",
+                    "message": "DELETE requires a WHERE clause",
+                },
+            )
 
         if params.get("order", "").startswith("id"):
             rows.sort(key=lambda row: row["id"])
@@ -428,6 +447,9 @@ class TestConfiguration:
     def test_settings_read_url_and_key(self, monkeypatch):
         monkeypatch.setenv("VOLTSPACE_SUPABASE_URL", "https://x.supabase.co/")
         monkeypatch.setenv("VOLTSPACE_SUPABASE_KEY", "abc")
+        # The service key wins when present, so clear it - otherwise this test would
+        # read whatever the developer happens to have exported in their shell.
+        monkeypatch.delenv("VOLTSPACE_SUPABASE_SERVICE_KEY", raising=False)
         settings = supabase_settings()
         assert settings == {
             "url": "https://x.supabase.co/",

@@ -114,6 +114,20 @@ class SupabaseStore:
             return [("household_id", f"eq.{self.household_id}")]
         return []
 
+    def _delete_scope(self) -> list[tuple[str, str]]:
+        """Filters for a DELETE.
+
+        PostgREST refuses a DELETE without a WHERE clause (error 21000, "DELETE requires
+        a WHERE clause") as a guard against wiping a table by accident. When no household
+        is configured we mean "every row", so match them explicitly rather than sending
+        no filter at all.
+        """
+
+        scope = self._scope()
+        if scope:
+            return scope
+        return [("id", "gte.0")]
+
     def _request(
         self,
         method: str,
@@ -159,7 +173,14 @@ class SupabaseStore:
         try:
             payload = response.json()
         except ValueError:
-            return f"Supabase returned HTTP {response.status_code}: {response.text[:200]}"
+            # Not a PostgREST response at all - usually the wrong URL, a proxy or a
+            # parked domain. Dumping the whole HTML body helps nobody, so keep one line.
+            snippet = " ".join(response.text.split())[:80]
+            return (
+                f"Supabase returned HTTP {response.status_code} but the body was not JSON. "
+                "Check that the project URL looks like https://<project>.supabase.co. "
+                f"Response started with: {snippet!r}"
+            )
 
         code = str(payload.get("code") or "")
         message = payload.get("message") or payload.get("error") or "unknown error"
@@ -350,11 +371,11 @@ class SupabaseStore:
         """
 
         payload = [self._dict_to_row(appliance) for appliance in appliances]
-        self._request("DELETE", params=self._scope(), prefer="return=minimal")
+        self._request("DELETE", params=self._delete_scope(), prefer="return=minimal")
         if not payload:
             return []
         rows = self._request("POST", body=payload, prefer="return=representation")
         return [self._row_to_dict(row) for row in (rows or [])]
 
     def clear(self) -> None:
-        self._request("DELETE", params=self._scope(), prefer="return=minimal")
+        self._request("DELETE", params=self._delete_scope(), prefer="return=minimal")

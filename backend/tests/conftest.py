@@ -26,6 +26,19 @@ def pytest_configure(config: pytest.Config) -> None:
     TEST_DB.parent.mkdir(parents=True, exist_ok=True)
     os.environ["VOLTSPACE_DB"] = str(TEST_DB)
 
+    # Tests must never touch a real Supabase project. Without this, a developer who has
+    # VOLTSPACE_SUPABASE_* exported would make every TestClient startup attempt a network
+    # call (and only fall back to the local store after a slow failure). Tests that need
+    # Supabase set these themselves with monkeypatch.
+    for name in (
+        "VOLTSPACE_SUPABASE_URL",
+        "VOLTSPACE_SUPABASE_KEY",
+        "VOLTSPACE_SUPABASE_SERVICE_KEY",
+        "VOLTSPACE_HOUSEHOLD_ID",
+    ):
+        os.environ.pop(name, None)
+    os.environ["VOLTSPACE_STORAGE"] = "local"
+
 
 @pytest.fixture(autouse=True)
 def clean_household() -> None:
