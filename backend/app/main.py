@@ -784,6 +784,7 @@ async def household_dashboard(request: Request, payload: DashboardRequest) -> Da
         "estimated_monthly_cost_twd": bill["total_amount"],
         "effective_rate_per_kwh": bill["effective_rate_per_kwh"],
         "season_label_zh": bill["season_label_zh"],
+        "season_label_en": bill["season_label_en"],
         "estimated_total_current_amps": load["estimated_total_current_amps"] if load else None,
         "load_verdict": load["verdict"] if load else None,
         "load_severity": load["severity"] if load else None,

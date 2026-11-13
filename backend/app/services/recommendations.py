@@ -176,8 +176,8 @@ def _rule_matches(rule: Mapping[str, Any], context: Mapping[str, Any]) -> bool:
 def _estimate_rule_saving(
     rule: Mapping[str, Any],
     context: Mapping[str, Any],
-) -> tuple[float, str]:
-    """Return ``(saved_kwh_per_month, assumption_zh)`` for one rule."""
+) -> tuple[float, str, str]:
+    """Return ``(saved_kwh_per_month, assumption_zh, assumption_en)`` for one rule."""
 
     base_kwh = context["monthly_kwh"]
 
@@ -185,11 +185,14 @@ def _estimate_rule_saving(
     if cap_hours is not None:
         # Saving = removing a slice of the daily schedule, bounded by the cap.
         # The slice is taken as ``reduction_ratio`` of the current schedule, and can
-        # never exceed either the cap or the current usage itself.
         planned_hours = context["hours_per_day"] * float(rule.get("reduction_ratio", 0.0))
         hours_saved = min(float(cap_hours), planned_hours, context["hours_per_day"])
         if hours_saved <= 0:
-            return 0.0, "目前使用時數已低於建議值，無需調整。"
+            return (
+                0.0,
+                "目前使用時數已低於建議值，無需調整。",
+                "Current usage is already below the recommended level, so no change is needed.",
+            )
         saved_kwh = daily_energy_kwh(
             context["power_watts"], hours_saved, context.get("quantity", 1)
         ) * context["days_per_month"]
@@ -197,11 +200,20 @@ def _estimate_rule_saving(
             f"假設每日可減少 {hours_saved:.1f} 小時使用（原 {context['hours_per_day']:.1f} 小時），"
             f"每月 {context['days_per_month']} 天。"
         )
-        return max(saved_kwh, 0.0), assumption
+        assumption_en = (
+            f"Assumes {hours_saved:.1f} hours less use per day (from "
+            f"{context['hours_per_day']:.1f} hours), over {context['days_per_month']} "
+            "days a month."
+        )
+        return max(saved_kwh, 0.0), assumption, assumption_en
 
     ratio = float(rule.get("reduction_ratio", 0.0))
     saved_kwh = base_kwh * ratio
     assumption = f"假設可降低該電器 {ratio * 100:.0f}% 的用電量（以目前每月 {base_kwh:.1f} 度為基準）。"
+    assumption_en = (
+        f"Assumes a {ratio * 100:.0f}% reduction for this appliance, based on the current "
+        f"{base_kwh:.1f} kWh per month."
+    )
 
     if rule.get("use_efficient_alternative"):
         alternative_power = context.get("alternative_power_watts")
@@ -218,8 +230,13 @@ def _estimate_rule_saving(
                     f"以同類高效率機種 {alternative_power:g}W 取代目前 {context['power_watts']:g}W，"
                     f"使用時數不變，每月可省 {saved_kwh:.1f} 度。"
                 )
+                assumption_en = (
+                    f"Replacing the current {context['power_watts']:g} W with an efficient "
+                    f"{alternative_power:g} W unit of the same kind, at unchanged hours, "
+                    f"saves {saved_kwh:.1f} kWh per month."
+                )
 
-    return max(saved_kwh, 0.0), assumption
+    return max(saved_kwh, 0.0), assumption, assumption_en
 
 
 def _severity_from_share(share: float) -> str:
@@ -245,19 +262,30 @@ def _build_recommendation(
     severity: str,
     confidence: str,
     extra: Mapping[str, Any] | None = None,
+    title_en: str | None = None,
+    reason_en: str | None = None,
+    suggestion_en: str | None = None,
+    assumption_en: str | None = None,
 ) -> dict[str, Any]:
+    # Every text field is emitted in both languages. When no English exists the Chinese
+    # text is used, so an English client always has something to show rather than an
+    # empty card - a missing translation is visible, never fatal.
     payload = {
         "id": key,
         "recommendation_key": f"{key}::{appliance_key}",
         "appliance": appliance_name,
         "appliance_key": appliance_key,
         "title_zh": title_zh,
+        "title_en": title_en or title_zh,
         "reason_zh": reason_zh,
+        "reason_en": reason_en or reason_zh,
         "suggestion_zh": suggestion_zh,
+        "suggestion_en": suggestion_en or suggestion_zh,
         "estimated_monthly_saving_kwh": round(saved_kwh, 3),
         "estimated_monthly_saving_twd": round(monthly_cost_saved, 2),
         "estimated_annual_saving_twd": round(monthly_cost_saved * 12, 2),
         "assumption_zh": assumption_zh,
+        "assumption_en": assumption_en or assumption_zh,
         "priority": priority,
         "severity": severity,
         "confidence": confidence,
@@ -344,6 +372,9 @@ def generate_recommendations(
         name = str(record.get("name") or "appliance")
         share = (record["_monthly_kwh"] / total_kwh) if total_kwh > 0 else 0.0
         reference = _match_reference(record)
+        # The user may have typed the appliance name in either language; use the
+        # catalogue's English name for English output when we know which appliance it is.
+        name_en = (reference or {}).get("name_en") or name
 
         context: dict[str, Any] = {
             "power_watts": float(record["power_watts"]),
@@ -372,17 +403,32 @@ def generate_recommendations(
                     appliance_name=name,
                     appliance_key=record["_key"],
                     title_zh=f"{name} 是家中用電量最高的電器之一",
+                    title_en=f"{name_en} is one of the biggest electricity users at home",
                     reason_zh=(
                         f"預估每月用電 {record['_monthly_kwh']:.1f} 度，占全家總用電 {share * 100:.1f}%。"
                         "優先改善這類電器，節電效果最明顯。"
+                    ),
+                    reason_en=(
+                        f"It is estimated at {record['_monthly_kwh']:.1f} kWh per month, "
+                        f"{share * 100:.1f}% of the household total. Improving this "
+                        "appliance first gives the largest saving."
                     ),
                     suggestion_zh=(
                         "縮短使用時間、改用高效率機種或調整使用時段（避開尖峰），"
                         "只要能降低 15% 用電量就能看到明顯差距。"
                     ),
+                    suggestion_en=(
+                        "Use it for less time, switch to a more efficient model, or move "
+                        "usage off-peak - cutting just 15% already makes a visible "
+                        "difference."
+                    ),
                     saved_kwh=saved,
                     monthly_cost_saved=saved * blended_rate,
                     assumption_zh=f"假設將此電器的用電量降低 15%（目前每月 {record['_monthly_kwh']:.1f} 度）。",
+                    assumption_en=(
+                        f"Assumes a 15% reduction for this appliance (currently "
+                        f"{record['_monthly_kwh']:.1f} kWh per month)."
+                    ),
                     priority=1,
                     severity="high",
                     confidence="medium",
@@ -395,7 +441,7 @@ def generate_recommendations(
             for rule in reference.get("rules", []):
                 if not _rule_matches(rule, context):
                     continue
-                saved, assumption = _estimate_rule_saving(rule, context)
+                saved, assumption, assumption_en = _estimate_rule_saving(rule, context)
                 if saved <= 0 and rule.get("reduction_ratio", 0) == 0:
                     # Behavioural/safety advice with no energy claim (e.g. hair dryer).
                     appliance_recommendations.append(
@@ -404,11 +450,17 @@ def generate_recommendations(
                             appliance_name=name,
                             appliance_key=record["_key"],
                             title_zh=rule["title_zh"],
+                            title_en=rule.get("title_en"),
                             reason_zh=rule["reason_zh"],
+                            reason_en=rule.get("reason_en"),
                             suggestion_zh=rule["suggestion_zh"],
+                            suggestion_en=rule.get("suggestion_en"),
                             saved_kwh=0.0,
                             monthly_cost_saved=0.0,
                             assumption_zh="此建議主要針對用電安全與使用習慣，未估算節省度數。",
+                            assumption_en=(
+                                "Safety and usage-habit advice; no kWh saving is estimated."
+                            ),
                             priority=int(rule.get("priority", 3)),
                             severity=str(rule.get("severity", "low")),
                             confidence="high",
@@ -422,11 +474,15 @@ def generate_recommendations(
                         appliance_name=name,
                         appliance_key=record["_key"],
                         title_zh=rule["title_zh"],
+                        title_en=rule.get("title_en"),
                         reason_zh=rule["reason_zh"],
+                        reason_en=rule.get("reason_en"),
                         suggestion_zh=rule["suggestion_zh"],
+                        suggestion_en=rule.get("suggestion_en"),
                         saved_kwh=saved,
                         monthly_cost_saved=saved * blended_rate,
                         assumption_zh=assumption,
+                        assumption_en=assumption_en,
                         priority=int(rule.get("priority", 3)),
                         severity=str(rule.get("severity", "low")),
                         confidence="medium",
@@ -444,14 +500,25 @@ def generate_recommendations(
                         appliance_name=name,
                         appliance_key=record["_key"],
                         title_zh=f"{name} 每日使用時間偏長",
+                        title_en=f"{name_en} is used for a long time each day",
                         reason_zh=(
                             f"每日使用 {context['hours_per_day']:.1f} 小時、每月 {context['days_per_month']} 天，"
                             f"月用電量約 {record['_monthly_kwh']:.1f} 度。"
                         ),
+                        reason_en=(
+                            f"Used {context['hours_per_day']:.1f} hours a day over "
+                            f"{context['days_per_month']} days, about "
+                            f"{record['_monthly_kwh']:.1f} kWh per month."
+                        ),
                         suggestion_zh="檢視是否真的需要這麼長的時間，並在不用時完全關閉電源。",
+                        suggestion_en=(
+                            "Check whether it really needs to run that long, and switch it "
+                            "off completely when not in use."
+                        ),
                         saved_kwh=saved,
                         monthly_cost_saved=saved * blended_rate,
                         assumption_zh="假設可降低 15% 使用時間。",
+                        assumption_en="Assumes a 15% reduction in usage time.",
                         priority=3,
                         severity=_severity_from_share(share),
                         confidence="low",
@@ -497,13 +564,28 @@ def generate_recommendations(
                 appliance_name=str(record.get("name")),
                 appliance_key=record["_key"],
                 title_zh=f"考慮更換為{alternative['label_zh']}",
+                title_en=(
+                    f"Consider replacing it with: "
+                    f"{alternative.get('label_en') or alternative['label_zh']}"
+                ),
                 reason_zh=(
                     f"目前 {record['power_watts']:g}W 的{reference['name_zh']}每月約用 {current_kwh:.1f} 度；"
                     f"同類高效率機種約 {alternative['power_watts']:g}W。"
                 ),
+                reason_en=(
+                    f"The current {record['power_watts']:g} W "
+                    f"{reference.get('name_en') or reference['name_zh']} uses about "
+                    f"{current_kwh:.1f} kWh per month; an efficient unit of the same kind "
+                    f"is about {alternative['power_watts']:g} W."
+                ),
                 suggestion_zh=(
                     f"{alternative.get('note_zh', '')} 若日後需要汰換，可優先選擇此類機種，"
                     "新機價格需自行評估是否值得。"
+                ).strip(),
+                suggestion_en=(
+                    f"{alternative.get('note_en', '')} If this appliance needs replacing "
+                    "later, prefer a model like this; whether the price is worth it is your "
+                    "call."
                 ).strip(),
                 saved_kwh=saved,
                 monthly_cost_saved=saved * blended_rate,
@@ -511,11 +593,18 @@ def generate_recommendations(
                     f"假設使用時數（每日 {record['hours_per_day']:g} 小時、每月 {record.get('days_per_month', 30)} 天）"
                     "與目前完全相同，僅更換機種功率。"
                 ),
+                assumption_en=(
+                    f"Assumes identical usage ("
+                    f"{record['hours_per_day']:g} hours a day, "
+                    f"{record.get('days_per_month', 30)} days a month) and only the "
+                    "appliance's wattage changes."
+                ),
                 priority=2,
                 severity="medium",
                 confidence="medium",
                 extra={
                     "alternative_label_zh": alternative["label_zh"],
+                    "alternative_label_en": alternative.get("label_en"),
                     "alternative_power_watts": alternative["power_watts"],
                     "is_purchase_advice": True,
                 },

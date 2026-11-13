@@ -435,12 +435,20 @@ class RecommendationOut(BaseModel):
         description="家電身分（appliance_id，或電池內的位置索引）：同名電器會各自計數。",
     )
     title_zh: str
+    title_en: str | None = Field(default=None, description="English title (falls back to title_zh).")
     reason_zh: str
+    reason_en: str | None = Field(default=None, description="English reason (falls back to reason_zh).")
     suggestion_zh: str
+    suggestion_en: str | None = Field(
+        default=None, description="English suggestion (falls back to suggestion_zh)."
+    )
     estimated_monthly_saving_kwh: float
     estimated_monthly_saving_twd: float
     estimated_annual_saving_twd: float
     assumption_zh: str
+    assumption_en: str | None = Field(
+        default=None, description="English assumption (falls back to assumption_zh)."
+    )
     priority: int
     severity: Literal["high", "medium", "low", "info"]
     confidence: Literal["high", "medium", "low"]
@@ -448,6 +456,7 @@ class RecommendationOut(BaseModel):
     advice_only: bool | None = None
     is_purchase_advice: bool | None = None
     alternative_label_zh: str | None = None
+    alternative_label_en: str | None = None
     alternative_power_watts: float | None = None
     share_of_total_percent: float | None = None
 

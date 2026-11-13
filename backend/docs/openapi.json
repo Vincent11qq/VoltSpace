@@ -2747,13 +2747,49 @@
             "type": "string",
             "title": "Title Zh"
           },
+          "title_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title En",
+            "description": "English title (falls back to title_zh)."
+          },
           "reason_zh": {
             "type": "string",
             "title": "Reason Zh"
           },
+          "reason_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason En",
+            "description": "English reason (falls back to reason_zh)."
+          },
           "suggestion_zh": {
             "type": "string",
             "title": "Suggestion Zh"
+          },
+          "suggestion_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion En",
+            "description": "English suggestion (falls back to suggestion_zh)."
           },
           "estimated_monthly_saving_kwh": {
             "type": "number",
@@ -2770,6 +2806,18 @@
           "assumption_zh": {
             "type": "string",
             "title": "Assumption Zh"
+          },
+          "assumption_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assumption En",
+            "description": "English assumption (falls back to assumption_zh)."
           },
           "priority": {
             "type": "integer",
@@ -2837,6 +2885,17 @@
               }
             ],
             "title": "Alternative Label Zh"
+          },
+          "alternative_label_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternative Label En"
           },
           "alternative_power_watts": {
             "anyOf": [
