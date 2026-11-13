@@ -30,6 +30,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from functools import lru_cache
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parent
@@ -38,6 +39,10 @@ DEFAULT_PORT = 8000
 
 # Minimum Python the dependencies support.
 MIN_PYTHON = (3, 10)
+
+# A healthy interpreter answers a version probe in well under a second. A Windows Store
+# app-execution alias can hang forever, so probes get a short, hard limit.
+DISCOVERY_TIMEOUT = 5.0
 
 # Names this project's virtualenv may have. ".venv" is what the docs and setup use.
 VENV_CANDIDATES = (".venv", ".venv314", "venv")
@@ -96,7 +101,8 @@ def venv_python() -> Path | None:
     return None
 
 
-def _candidate_interpreters() -> list[Path]:
+@lru_cache(maxsize=1)
+def _discover_interpreters() -> tuple[Path, ...]:
     """Every plausible Python on this machine, in preference order."""
 
     found: list[Path] = []
@@ -105,6 +111,11 @@ def _candidate_interpreters() -> list[Path]:
         if not path:
             return
         candidate = Path(path)
+        # Windows ships "app execution aliases" (WindowsApps\python.exe) that are stubs:
+        # running one can block for a long time while it tries to open the Store, and it
+        # is not a usable interpreter. Skip them so startup never hangs on one.
+        if "windowsapps" in str(candidate).lower():
+            return
         try:
             if candidate.exists() and candidate not in found:
                 found.append(candidate)
@@ -123,7 +134,7 @@ def _candidate_interpreters() -> list[Path]:
                 if selector:
                     args.append(selector)
                 args += ["-c", "import sys;print(sys.executable)"]
-                path = _run_and_capture(args)
+                path = _run_and_capture(args, timeout=DISCOVERY_TIMEOUT)
                 add(path)
 
     # 3. Whatever `python` / `python3` resolve to on PATH.
@@ -143,10 +154,21 @@ def _candidate_interpreters() -> list[Path]:
             for name in ("python3", "python3.13", "python3.12", "python3.11", "python3.10"):
                 add(Path(prefix) / name)
 
-    return found
+    return tuple(found)
 
 
-def _run_and_capture(args: list[str], timeout: float = 30) -> str | None:
+def _candidate_interpreters() -> list[Path]:
+    """A fresh list of the interpreters found on this machine.
+
+    The discovery itself is cached: it spawns the ``py`` launcher several times and can
+    take seconds on Windows, and it is called more than once (choose_runtime, then again
+    when building the failure message).
+    """
+
+    return list(_discover_interpreters())
+
+
+def _run_and_capture(args: list[str], timeout: float = DISCOVERY_TIMEOUT) -> str | None:
     try:
         result = subprocess.run(
             args, capture_output=True, text=True, timeout=timeout, check=False
@@ -159,6 +181,7 @@ def _run_and_capture(args: list[str], timeout: float = 30) -> str | None:
     return lines[-1] if lines else None
 
 
+@lru_cache(maxsize=None)
 def python_version(python: Path) -> tuple[int, int] | None:
     raw = _run_and_capture(
         [str(python), "-c", "import sys;print('%d.%d' % sys.version_info[:2])"]
@@ -173,9 +196,26 @@ def python_version(python: Path) -> tuple[int, int] | None:
 
 
 def has_dependencies(python: Path, extra_env: dict[str, str]) -> bool:
-    """True when this interpreter can import the stack AND this project's app package."""
+    """True when this interpreter can see the stack AND this project's app package.
 
-    probe = "import fastapi, pydantic, uvicorn; import app.main; print('ok')"
+    This deliberately checks that the packages are *present* rather than importing them.
+    Importing FastAPI, Pydantic, Starlette and this app takes several seconds on a cold
+    cache, and it runs once per candidate interpreter - which made the launcher sit there
+    for 30+ seconds before the server even started.
+
+    A missing module is what this is for. A module that is present but broken (syntax
+    error, bad data file) is diagnosed much better by uvicorn's own traceback than by a
+    "no packages found" message, which would point at the wrong problem.
+    """
+
+    probe = (
+        "import importlib.util as u, sys\n"
+        "missing = [n for n in ('fastapi', 'pydantic', 'uvicorn') if u.find_spec(n) is None]\n"
+        "if u.find_spec('app') is None:\n"
+        "    missing.append('app')\n"
+        "print(','.join(missing))\n"
+        "sys.exit(1 if missing else 0)\n"
+    )
     env = {**os.environ, **extra_env}
     paths = [str(BACKEND_ROOT)]
     extra_libs = extra_env.get("EXTRA_LIBS")
@@ -190,9 +230,9 @@ def has_dependencies(python: Path, extra_env: dict[str, str]) -> bool:
             env=env,
             capture_output=True,
             text=True,
-            timeout=90,
+            timeout=30,
         )
-        return result.returncode == 0 and "ok" in result.stdout
+        return result.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
 

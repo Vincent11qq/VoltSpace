@@ -55,12 +55,7 @@ def test_no_machine_specific_paths(relative: str):
 def test_launcher_discovers_python_without_fixed_paths():
     """The discovery helper must find interpreters using only PATH and known locations."""
 
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("voltspace_start", BACKEND_ROOT / "start.py")
-    launcher = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(launcher)
+    launcher = _load_launcher()
 
     candidates = launcher._candidate_interpreters()
     assert candidates, "no Python found on this machine"
@@ -68,12 +63,7 @@ def test_launcher_discovers_python_without_fixed_paths():
 
 
 def test_launcher_reports_missing_dependencies_helpfully(monkeypatch=None):
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("voltspace_start", BACKEND_ROOT / "start.py")
-    launcher = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(launcher)
+    launcher = _load_launcher()
 
     original = launcher.has_dependencies
     launcher.has_dependencies = lambda *args, **kwargs: False
@@ -129,14 +119,30 @@ def test_data_directory_defaults_are_relative_to_the_project():
 # coverage: port_free shipped with a shadowed-module bug that no test caught.
 
 
-def _load_launcher():
-    import importlib.util
+_LAUNCHER = None
 
-    spec = importlib.util.spec_from_file_location("voltspace_start", BACKEND_ROOT / "start.py")
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+
+def _load_launcher():
+    """One module instance for the whole file.
+
+    ``start.py`` caches interpreter discovery internally, and discovery spawns the ``py``
+    launcher several times (seconds each on Windows). Re-executing the module per test
+    threw that cache away and made this file take a minute; sharing the instance keeps the
+    same coverage in a fraction of the time.
+    """
+
+    global _LAUNCHER
+    if _LAUNCHER is None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "voltspace_start", BACKEND_ROOT / "start.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        _LAUNCHER = module
+    return _LAUNCHER
 
 
 def test_port_free_detects_a_free_port():
