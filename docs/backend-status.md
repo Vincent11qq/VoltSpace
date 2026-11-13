@@ -131,8 +131,19 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 寫入前一定先過計算核心的驗證，所以不合法的家電不可能進資料庫。
 
 **為什麼不用 Supabase 當預設**：Supabase 需要專案網址、金鑰、登入流程，
-組員下載後不能直接跑。SQLite 讓 App 離線可用；Supabase 仍支援，
-schema 在 `db/schema.sql`，切換方式見 `docs/supabase.md`。
+組員下載後不能直接跑。SQLite 讓 App 離線可用。
+
+**Supabase 已經實作完成**（`app/store_supabase.py` + `app/storage.py`），
+不用改程式碼，設環境變數就切換：
+
+| `VOLTSPACE_STORAGE` | 行為 |
+| --- | --- |
+| `auto`（預設） | 有設定 Supabase 就用；連不上就退回 SQLite 並印出原因 |
+| `supabase` | 強制使用，設定錯誤時啟動失敗（不會假裝成功） |
+| `local` | 只用 SQLite |
+
+`/health` 的 `storage` 欄位會回報實際使用的後端（`supabase` 或 `local-sqlite`）。
+步驟見 `docs/supabase.md`；`tools/supabase_doctor.py` 可在接線前檢查專案是否可用。
 
 ### 3.2 儀表板聚合端點（`POST /household/dashboard`）
 

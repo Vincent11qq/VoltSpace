@@ -74,6 +74,8 @@ from .services.recommendations import (
 )
 from .services.simulation import SimulationError, simulate
 from .store import ApplianceStore, StoreError, to_api_appliance
+from .storage import create_store as storage_create_store
+from .storage import describe as storage_describe
 
 
 @asynccontextmanager
@@ -91,13 +93,13 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(f"VoltSpace data file is invalid: {exc}") from exc
     app.state.data_summary = summary
 
-    store = ApplianceStore()
+    store = storage_create_store()
     try:
-        # Touch the database once so a permissions problem surfaces at boot, not on the
-        # first save. ``count`` is the cheapest read that proves the file is writable.
+        # Touch the store once so a permissions problem surfaces at boot, not on the
+        # first save. ``count`` is the cheapest read that proves it is readable.
         store.count()
     except StoreError as exc:
-        raise RuntimeError(f"VoltSpace cannot open its local database: {exc}") from exc
+        raise RuntimeError(f"VoltSpace cannot open its household store: {exc}") from exc
     app.state.store = store
     yield
 
@@ -853,7 +855,7 @@ async def get_appliances() -> dict[str, Any]:
 
 
 @app.get("/health", response_model=HealthResponse, tags=["reference"], summary="健康檢查")
-async def health() -> HealthResponse:
+async def health(request: Request) -> HealthResponse:
     data = load_tariffs()
     # The catalogue size is a constant of the data file, so read it directly instead of
     # building the whole summary payload just to count it.
@@ -865,7 +867,7 @@ async def health() -> HealthResponse:
         tariff_schema_version=data.get("schema_version", "unknown"),
         tariff_default_plan=data["default_plan_id"],
         appliance_catalog_count=len(catalogue["appliances"]),
-        storage="local-sqlite",
+        storage=storage_describe(request.app.state.store),
     )
 
 

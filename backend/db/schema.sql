@@ -240,18 +240,23 @@ create policy "appliances_delete_own"
 
 -- ---------------------------------------------------------------------------
 -- 6. Seed the tariff plans (matches app/data/tariffs.json)
+--
+-- NOTE: the backend always calculates from app/data/tariffs.json, because it must work
+-- offline. These rows exist so the mobile client and Member B's tooling can read the same
+-- numbers. Keep them in sync: rates below are the MOEA adjustment effective 2025-10-01
+-- (summer 1.78/2.55/3.80/5.14/6.44/8.86, non-summer 1.78/2.26/3.13/4.24/5.27/7.03).
 -- ---------------------------------------------------------------------------
 insert into public.tariff_plans (id, name_zh, name_en, type, effective_from, data)
 values
     ('tw_residential_tiered',
      '台電住宅用電－累進（級距）電價',
      'Taipower residential - progressive (tiered) rate',
-     'tiered', date '2024-04-01',
-     '{"seasons": {"summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.68},{"index":2,"up_to_kwh":330,"rate":2.45},{"index":3,"up_to_kwh":500,"rate":3.70},{"index":4,"up_to_kwh":700,"rate":5.04},{"index":5,"up_to_kwh":1000,"rate":6.24},{"index":6,"up_to_kwh":null,"rate":8.46}]}, "non_summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.68},{"index":2,"up_to_kwh":330,"rate":2.16},{"index":3,"up_to_kwh":500,"rate":3.03},{"index":4,"up_to_kwh":700,"rate":4.14},{"index":5,"up_to_kwh":1000,"rate":5.07},{"index":6,"up_to_kwh":null,"rate":6.63}]}}}'::jsonb),
+     'tiered', date '2025-10-01',
+     '{"seasons": {"summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.78},{"index":2,"up_to_kwh":330,"rate":2.55},{"index":3,"up_to_kwh":500,"rate":3.80},{"index":4,"up_to_kwh":700,"rate":5.14},{"index":5,"up_to_kwh":1000,"rate":6.44},{"index":6,"up_to_kwh":null,"rate":8.86}]}, "non_summer": {"tiers": [{"index":1,"up_to_kwh":120,"rate":1.78},{"index":2,"up_to_kwh":330,"rate":2.26},{"index":3,"up_to_kwh":500,"rate":3.13},{"index":4,"up_to_kwh":700,"rate":4.24},{"index":5,"up_to_kwh":1000,"rate":5.27},{"index":6,"up_to_kwh":null,"rate":7.03}]}}}'::jsonb),
     ('tw_residential_tou',
      '台電住宅用電－時間電價（二段式，估算）',
      'Taipower residential - time-of-use (two-segment, estimated)',
-     'time_of_use', date '2024-04-01',
+     'time_of_use', date '2025-10-01',
      '{"seasons": {"summer": {"peak": 5.16, "off_peak": 2.13}, "non_summer": {"peak": 5.16, "off_peak": 1.90}}}'::jsonb),
     ('flat_rate_resell_reference',
      '單一費率參考（租屋常見房東轉售價）',

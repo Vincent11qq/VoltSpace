@@ -1,9 +1,13 @@
-# 使用 Member B 的 Supabase（選用）
+# 使用 Supabase（已實作，預設關閉）
 
 VoltSpace 預設把家電存在**本地 SQLite**（`backend/.data/voltspace.db`），
 因為這樣「下載就能跑」，不需要註冊任何雲端服務。
 
-若要把資料放到 Supabase（例如多人共用、跨裝置），照以下步驟。
+要把資料改放 Supabase（跨裝置、多人共用）**不需要改程式碼**——
+設定環境變數即可，adapter 已經寫好（`app/store_supabase.py`）。
+
+> 只想先試試看？直接啟動就是 SQLite 模式，功能完全一樣。
+> 想確認目前的儲存模式，看 <http://127.0.0.1:8000/health> 的 `storage` 欄位。
 
 ---
 
@@ -70,52 +74,86 @@ VOLTSPACE_SUPABASE_SERVICE_KEY=<service role key>
 
 ## 4. 把後端接到 Supabase
 
-`app/store.py` 定義了後端需要的介面（`list_appliances`、`add_appliance`、
-`update_appliance`、`delete_appliance`、`replace_appliances`）。
-要換成 Supabase，新增一個同名方法的類別即可，計算模組完全不用改：
+**這已經實作了**，不需要改程式碼，只要設環境變數。
+`app/store_supabase.py` 是 Supabase 版本，`app/storage.py` 負責挑選用哪一個。
 
-```python
-# app/store_supabase.py（示意）
-import os
-from supabase import create_client
+### 4.1 三個步驟
 
-class SupabaseStore:
-    def __init__(self, household_token: str):
-        self.client = create_client(
-            os.environ["VOLTSPACE_SUPABASE_URL"],
-            os.environ["VOLTSPACE_SUPABASE_KEY"],
-        )
-        self.token = household_token
+```powershell
+# 1) 在 Supabase 的 SQL Editor 執行 backend/db/schema.sql（建立資料表）
 
-    def list_appliances(self):
-        response = (
-            self.client.table("appliances")
-            .select("*")
-            .eq("household_id", self.token)
-            .order("id")
-            .execute()
-        )
-        return response.data
+# 2) 設定環境變數（PowerShell）
+$env:VOLTSPACE_SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+$env:VOLTSPACE_SUPABASE_KEY = "<service_role key>"
+
+# 3) 先檢查，再啟動
+cd backend
+python tools/supabase_doctor.py --write-test
+run_app.bat
 ```
 
-然後在 `app/main.py` 的 lifespan 裡決定要用哪一個：
+啟動後打開 <http://127.0.0.1:8000/health>，`"storage"` 應該變成 `"supabase"`。
 
-```python
-store = SupabaseStore(token) if os.environ.get("VOLTSPACE_SUPABASE_URL") else ApplianceStore()
+### 4.2 為什麼要用 service_role key
+
+`db/schema.sql` 的 RLS 只授權 `authenticated` 使用者存取 `appliances`，
+而這個 App **沒有登入流程**。匿名請求的 `auth.uid()` 是 `NULL`，
+所以用 anon key 讀寫會被 RLS 拒絕。
+
+伺服器端用 `service_role` key 是 designed 的作法（它繞過 RLS），
+**前提是它只存在於後端**。若你之後加入了登入流程，就可以改回 anon key。
+
+用錯 key 時，doctor 會直接告訴你：
+
+```
+[FAIL] cannot read the appliances table  (Supabase refused the request (42501: ...).
+       The table's row level security is blocking this key. Use the service_role key ...)
 ```
 
-> 因為 `app/main.py` 只依賴那幾個方法，這是**唯一**需要改的地方；
-> `_saved_list`、`household_dashboard` 等端點都不用動。
+### 4.3 環境變數一覽
+
+| 變數 | 必填 | 說明 |
+| --- | --- | --- |
+| `VOLTSPACE_SUPABASE_URL` | 是 | `https://<project>.supabase.co` |
+| `VOLTSPACE_SUPABASE_KEY` | 是 | service_role key（見 4.2） |
+| `VOLTSPACE_SUPABASE_SERVICE_KEY` | 否 | 設定時優先於上面那個 |
+| `VOLTSPACE_STORAGE` | 否 | `auto`（預設）／`supabase`／`local` |
+| `VOLTSPACE_SUPABASE_TABLE` | 否 | 預設 `appliances` |
+| `VOLTSPACE_HOUSEHOLD_ID` | 否 | 指定 household uuid，只讀寫該戶的資料 |
+
+### 4.4 三種模式的行為
+
+| `VOLTSPACE_STORAGE` | 沒設定 Supabase 時 | Supabase 壞掉時 |
+| --- | --- | --- |
+| `auto`（預設） | 用 SQLite | **自動退回 SQLite** 並印出原因 |
+| `supabase` | 啟動失敗並說明缺哪個變數 | 啟動失敗（不會假裝成功） |
+| `local` | 用 SQLite | 用 SQLite（完全忽略 Supabase） |
+
+`auto` 是為了讓 `run_app.bat` 在沒有雲端設定的機器上仍然可用；
+示範時如果你**不想**它偷偷用 SQLite，就設 `VOLTSPACE_STORAGE=supabase`。
+
+### 4.5 兩種欄位格式都支援
+
+Adapter 會在第一次連線時偵測欄位：
+
+* **current**（`db/schema.sql`）：`name` / `power_watts` / `hours_per_day` / …
+* **legacy**（Member B 原本的 SQL）：`appliance` / `power` / `minutes` / …
+
+遇到 legacy 格式會自動轉換（`minutes ÷ 60` → `hours_per_day`），
+但 legacy 沒有 `days_per_month`、`voltage`、`power_factor` 欄位，
+這三個值會用預設值且**不會被儲存**。想完整支援就重跑 `db/schema.sql`。
 
 ---
 
 ## 5. 注意事項
 
 - **不要把 service role key 放進前端**。它會繞過所有 RLS。
-- 匿名裝置的 `households.access_token` 等於密碼：只放在裝置端，用 header 傳給後端，
-  不要出現在 URL 或日誌。
-- Supabase 的免費方案會休眠，冷啟動可能要幾秒；本地 SQLite 沒有這個問題，
-  所以示範時建議用預設設定。
+- **專案被刪除或閒置太久，DNS 會消失**，連線會失敗。判斷方法：
+  `python tools/supabase_doctor.py` 的 DNS 檢查會顯示
+  `DNS does not resolve`。這時只能建新專案。
+- Supabase 的免費方案會休眠，冷啟動可能要幾秒；本地 SQLite 沒有這個問題。
+- **`replace_appliances`（前端「儲存全部」）不是交易性的**：它先 DELETE 再 INSERT，
+  如果 INSERT 失敗，該戶的家電會是空的。SQLite 版本有交易保護，Supabase 版本沒有。
 - 電價資料有兩份（`app/data/tariffs.json` 與 `tariff_plans` 表）。
-  **目前計算一律以 JSON 為準**（後端要能離線執行）；若你在資料庫改了費率，
-  記得同步更新 JSON，或把 `calculate_bill` 改成讀資料庫。
+  **目前計算一律以 JSON 為準**（後端要能離線執行）；`schema.sql` 的 seed
+  已同步成 2025-10-01 的費率，若你改了資料庫的費率，記得也改 JSON。
