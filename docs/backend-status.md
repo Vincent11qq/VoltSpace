@@ -378,6 +378,40 @@ python tools/python_share.py
 避免重複 `deepcopy`、避免為了取筆數而建出整個 payload。
 `generate_recommendations` 因此快了 72%。
 
+### 9.1 優化前的量測與逐項對照
+
+這一輪不是為了榨效能，而是「先量測、再動手」，順便修掉正確性問題。
+
+**實測改善（8 台家電，中位數）**
+
+| 項目 | 優化前 | 優化後 | 變化 |
+| --- | --- | --- | --- |
+| `generate_recommendations` | 0.477 ms | 0.132 ms | **−72%** |
+| `POST /recommendations` | 1.217 ms | 0.876 ms | −28% |
+| `POST /recommendations`（120 台家電） | 6.565 ms | 2.784 ms | **−58%** |
+
+**逐項對照**
+
+| 類別 | 問題 | 處理 |
+| --- | --- | --- |
+| 效能 | 每台家電都重建一次家電別名索引（約 36 筆），且同一台家電被比對兩次 | 索引與名稱正規化加 `lru_cache`；比對結果按字串快取 |
+| 效能 | `catalog_summary()` 只為了取筆數而建出整個 payload | 直接讀 `len(catalog["appliances"])` |
+| 效能 | 模擬時把家電清單 `deepcopy` 兩份 | 只快照一次，modified 由 baseline 複製 |
+| 正確性 | 用電量 0 度時 `lines` 是空陣列，前端畫級距圖會沒資料 | 回傳 1 筆「0 度、費率 X」的示意級距，並標記 `no_consumption` |
+| 正確性 | `flat`／時間電價默默接受 `billing_months: 2`，回應寫「2 個月」卻只算一個月的錢 | 改為回 400 `plan_does_not_support_billing_months` |
+| 正確性 | `PlanId` 是寫死的 Literal，新增電價方案要改程式 | 由 `tariffs.json` 動態產生 enum |
+| 正確性 | 資料檔有錯要等到第一個請求才炸 | 新增 `app/data_check.py`，啟動時驗證（lifespan），壞檔直接拒絕啟動 |
+| 一致性 | 負載估算的 `warnings` 只有英文，其他部分都雙語 | 全部改為 `message_zh` + `message_en` |
+| 死欄位 | `ApplianceLoadOut.power_factor` 永遠是 1.0，因為 request schema 用 `extra="forbid"` 擋掉了 | `ApplianceIn`／`ReplacementIn` 加上 `power_factor`（0.1–1.0），實際套用到電流計算 |
+| 死程式碼 | 未使用的常數、變數、`_cost_per_kwh` 的例外吞掉邏輯、重複的 plan 查詢 | 移除／合併 |
+
+**可維護性**
+
+- `resolve_season`／`season_label` 可接受 `tariffs` 參數，不再重複解析同一個檔案。
+- `BillBreakdown.as_dict()` 只查一次季節標籤（原本查兩次）。
+- `tools/lint_unused.py` 讓 `app/` 與 `tools/` 維持**零未使用 import**。
+- `tests/test_data_check.py`（29 個測試）守住資料檔完整性。
+
 ---
 
 ## 10. 還沒做 / 已知限制

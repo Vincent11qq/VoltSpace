@@ -1,13 +1,41 @@
 # VoltSpace — 完整可執行的 MVP
 
-VoltSpace 是 Group 9 的租屋用電管理 App。這個目錄現在是**整套可以一鍵執行的系統**：
+VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，估算每月用電與電費、
+檢查插座迴路會不會過載，並給出可以照著做的節電建議。
+這個 repo 是**整套可以一鍵執行的系統**，不是只有程式碼片段。
 
-- **後端計算核心（Member C，喬元震）** — 用電量、電費、負載、節電建議、情境模擬。
-- **前端（Member A，郭潼）** — 原本的 Flet 原型，已修好並改成呼叫後端計算。
-- **資料庫（Member B，呂婉菲）** — 原始 Supabase SQL 的 contract 問題已修正；
-  另附本地 SQLite，讓 App 不需要雲端帳號就能跑。
+| 成員 | 負責 | 放在哪裡 |
+| --- | --- | --- |
+| **Member C（喬元震）** | 計算核心：用電量、電費、負載、建議、模擬 | `backend/app/` |
+| **Member A（郭潼）** | 介面：原 Flet 原型 → 修正後改接後端 | `backend/web/`、`backend/desktop/`（原型存於 `prototype/`）|
+| **Member B（呂婉菲）** | 資料庫：Supabase schema 與連線 | `backend/db/schema.sql`、`Supabase/member-b-latest/` |
 
-## 一鍵啟動
+**目前狀態**（數字都是實測，可用文末指令重現）
+
+| 項目 | 值 |
+| --- | --- |
+| 版本 | `0.2.0` |
+| 測試 | **634 passed**（約 7 秒）|
+| API | 5 個計算端點 + 家電儲存 + 儀表板，共 17 條路由 |
+| 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
+| 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
+| 啟動時間 | 約 1.3 秒 |
+| Python 比例 | **89.0%**（含測試與工具）、**77.9%**（只算產品程式碼）|
+
+## 目錄
+
+- [快速開始](#快速開始) ← **只想先跑起來看，看這段就好**
+- [設計原則](#設計原則)
+- [1. 目錄結構](#1-目錄結構)
+- [2. 手動安裝與啟動](#2-手動安裝與啟動)
+- [3. API 一覽](#3-api-一覽)
+- [4. 計算與電價規則](#4-計算與電價規則)
+- [5. 測試](#5-測試)
+- [6. 安裝疑難排解](#6-安裝疑難排解)
+
+---
+
+## 快速開始
 
 ### 第一次使用（下載後）
 
@@ -50,6 +78,19 @@ run_app.bat            # Windows：雙擊即可
 所有文字都由後端提供兩種語言 —— 家電名稱、迴路名稱、電價方案、節電建議、
 警告與免責聲明都有 `_zh` / `_en` 兩份，前端只負責挑選。缺英文時會退回中文，**不會空白**。
 
+**家電存在哪裡**：預設寫進本機的 SQLite（`backend/.data/voltspace.db`），
+所以**不需要任何雲端帳號就能完整使用**。想改用 Supabase 只要設環境變數，程式不用改：
+
+| `VOLTSPACE_STORAGE` | 行為 |
+| --- | --- |
+| `auto`（預設）| 有設定 Supabase 就用它，沒有就退回 SQLite（並印出原因）|
+| `supabase` | 強制用 Supabase；設定有錯就啟動失敗（不會偷偷退回本機）|
+| `local` | 只用 SQLite，忽略 Supabase 設定 |
+
+需要 `VOLTSPACE_SUPABASE_URL` 與 `VOLTSPACE_SUPABASE_SERVICE_KEY`，
+`/health` 的 `storage` 欄位會顯示目前實際用的是哪一種。做法見
+[`backend/docs/supabase.md`](backend/docs/supabase.md)。
+
 > 詳細的整合說明、三個成員的原始成果分別被怎麼處理，見
 > [`backend/docs/integration.md`](backend/docs/integration.md)。
 >
@@ -69,8 +110,7 @@ run_app.bat            # Windows：雙擊即可
   （`.venv` 綁定作業系統與 Python 版本，複製過去通常不能用）。
 - 家電資料存在 `backend/.data/voltspace.db`；想保留就一起複製，不想保留刪掉即可。
 
-**如果沒有網路**，用離線安裝（見 [`backend/README` 的疑難排解](backend/docs/integration.md)），
-不需要 pip。
+**如果沒有網路**，用離線安裝（見 [6.2](#6-安裝疑難排解)），完全不需要 pip。
 
 ---
 
@@ -82,6 +122,8 @@ run_app.bat            # Windows：雙擊即可
 3. **前端不重算** — 畫面上的每個數字都來自後端 API；前端沒有任何公式或寫死的費率。
 4. **兩種驗證並存** — Pydantic 檢查 JSON 格式（HTTP 422），計算模組負責領域規則。
 5. **不誇大** — 電費與節電量都標示為估算；負載估算明確聲明**不保證電路安全**。
+6. **雙語在後端** — 家電、迴路、電價方案、建議、警告與免責聲明都同時回傳 `_zh`／`_en`，
+   前端只挑選、不翻譯；缺英文時退回中文，**不會留空白**。
 
 ---
 
@@ -94,58 +136,56 @@ VoltSpace/
 │   ├── app/
 │   │   ├── main.py              FastAPI 應用：計算 API + 家電儲存 + 儀表板端點
 │   │   ├── schemas.py           Pydantic 請求／回應模型（含 OpenAPI 範例）
-│   │   ├── store.py             本地 SQLite 家電儲存（不需要雲端就能用）
+│   │   ├── store.py             本機 SQLite 家電儲存（不需要雲端就能用）
+│   │   ├── store_supabase.py    Supabase（PostgREST）儲存層，欄位與 store.py 一致
+│   │   ├── storage.py           依環境變數挑選儲存後端（auto / supabase / local）
 │   │   ├── data_check.py        啟動時的資料檔完整性檢查（壞資料直接拒絕啟動）
-│   │   ├── calculators/         ← 純計算，無框架相依
+│   │   ├── calculators/         ← 純計算，不 import FastAPI 也不碰資料庫
 │   │   │   ├── consumption.py       每月用電量 + 輸入驗證
 │   │   │   ├── electricity_bill.py  電費（級距／時間電價／單一費率）
 │   │   │   └── load_estimator.py    電流與負載估算
 │   │   ├── services/            ← 規則與資料整合
-│   │   │   ├── recommendations.py   規則式節電建議
-│   │   │   └── simulation.py        情境模擬
+│   │   │   ├── recommendations.py   規則式節電建議（中英雙語）
+│   │   │   └── simulation.py        情境模擬（不改動原始資料）
 │   │   └── data/
 │   │       ├── tariffs.json         電價方案（台電住宅累進等 3 種）
-│   │       └── appliances.json      12 種家電參考功率／電壓／規則
-│   ├── web/                     ← Member A 的介面（HTML/CSS/JS，由後端提供）
+│   │       └── appliances.json      12 種家電：功率、電壓、10 條規則、替代機種
+│   ├── web/                     ← 網頁介面（HTML/CSS/JS，由後端提供，可中英切換）
 │   │   ├── index.html
 │   │   ├── app.css              沿用原型的新擬物風格
 │   │   └── app.js               只呼叫 API，不含公式與費率
-│   ├── desktop/app.py           Flet 桌面版（已升級到 Flet 1.0 並改接 API）
-│   ├── db/schema.sql            Supabase/PostgreSQL schema（已修正 contract）
+│   ├── desktop/app.py           Flet 桌面版（已升級 Flet 1.0 並改接 API）
+│   ├── db/
+│   │   ├── schema.sql           Supabase schema（2 張表 + RLS，已對齊線上專案）
+│   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   535 個測試
-│   │   ├── conftest.py
-│   │   ├── test_consumption.py
-│   │   ├── test_electricity_bill.py
-│   │   ├── test_load_estimator.py
-│   │   ├── test_recommendations.py
-│   │   ├── test_simulation.py
-│   │   ├── test_data_check.py
-│   │   ├── test_household_api.py    儲存與儀表板端點
-│   │   ├── test_portability.py      可攜性（不得有寫死路徑）
-│   │   ├── test_tariff_import.py    電價匯入工具與資料檔一致性
-│   │   └── test_api.py
+│   ├── tests/                   634 個測試（逐檔說明見第 5 節）
+│   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
-│   │   ├── supabase.md          如何使用 Member B 的 Supabase schema
+│   │   ├── supabase.md          如何用 Supabase（含 schema 對齊與錯誤排查）
 │   │   ├── openapi.json         產生的 OpenAPI 3.1 規格
-│   │   ├── examples/*.json      13 個真實請求範例（由程式產生）
-│   └── code-review-audit.md     對抗式程式碼審查紀錄與修正對照表
-├── tools/                       產生文件、smoke test、benchmark、離線安裝等
+│   │   └── examples/*.json      13 個真實請求／回應範例（由程式產生）
+│   ├── code-review-audit.md     對抗式程式碼審查紀錄與修正對照表
 │   ├── pytest.ini
 │   ├── requirements.txt         執行後端所需
 │   └── requirements-desktop.txt 選用：Flet 桌面版
+├── docs/backend-status.md       後端完成度、測試與限制的總整理
 ├── prototype/                   Member A 的原始 Flet 原型（Flet 0.x，僅供對照）
 ├── Python/                      Member B 的原始 Python 模組（已被 backend/app/store.py 取代）
 └── Supabase/
     ├── member-b-latest/         Member B 最新交付的 SQL（線上專案即用這份）
-    └── README.md                兩批 SQL 的差異說明
+    └── README.md                兩批 SQL 的差異與修正說明
 ```
 
 ---
 
-## 2. 快速開始
+## 2. 手動安裝與啟動
+
+> **多數情況不需要看這一節。** 上面的 [快速開始](#快速開始) 只要一行
+> `python start.py --setup` 再加 `run_app.bat` 就好了 —— 安裝、挑 Python、開瀏覽器全都自動。
+> 這裡是給「想自己控制虛擬環境」或「一鍵腳本在你的機器上失敗」時用的。
 
 > ### ⚠️ 先看這裡：為什麼連不上 `127.0.0.1:8000/docs`？
 >
@@ -186,7 +226,8 @@ pip install -r requirements.txt
 > python tools\install_wheels.py --src .wheels --dest .pylibs
 > ```
 >
-> 之後用 `run_app.bat` 啟動即可（它會自動設定 `PYTHONPATH`）。詳見第 8 節。
+> 之後用 `run_app.bat` 啟動即可（它會自動設定 `PYTHONPATH`）。
+> 完整說明見 6.2。
 >
 > ### ⚠️ 遇到 `pydantic-core` 編譯失敗？
 >
@@ -203,6 +244,7 @@ pip install -r requirements.txt
 > **解法**：`requirements.txt` 已改成 `pydantic==2.14.1` + `pydantic-core==2.50.1`，
 > 這個版本同時提供 cp312 與 cp314 的預編譯 wheel，因此 **3.12 與 3.14 都能安裝，不需要編譯器**。
 > 只要 `pip install -r requirements.txt` 即可。已實測 Python 3.14 可完整載入並通過全部測試。
+> 細節與排查見 6.1。
 >
 > 想自己確認某個 Python 版本有沒有預編譯 wheel：
 >
@@ -220,19 +262,13 @@ pip install -r requirements.txt
 
 ### 2.2 啟動 API
 
-**Windows 最簡單的方式**（會自動設定環境變數並印出網址）：
-
-```bash
-run_app.bat            # 預設 8000
-run_app.bat --port 8080   # 換連接埠，網址就要跟著改成 :8080/docs
-```
-
-或者手動啟動：
-
 ```bash
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
+
+日常使用其實直接 `run_app.bat` 就好（它會挑 Python、設定環境變數、開瀏覽器）；
+`--reload` 只在改程式碼時有用，正式示範時不要用（每次存檔都會重啟）。
 
 **必須在 `backend/` 目錄下執行**（`app.main` 是相對於這個目錄的套件路徑），
 而且這個終端機視窗要一直開著。看到下面這行才算成功：
@@ -254,7 +290,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 535 個測試
+python -m pytest                     # 全部 634 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -295,6 +331,8 @@ python tools/check_web_ui.py
 
 ## 3. API 一覽
 
+**五個計算端點**（這是規格要求的核心，`/docs` 可直接試）：
+
 | Method | Endpoint | 用途 |
 | --- | --- | --- |
 | POST | `/calculate/consumption` | 計算單一或多個家電的每月用電量 |
@@ -302,9 +340,30 @@ python tools/check_web_ui.py
 | POST | `/calculate/load` | 估算電流並與負載上限比較（初步警示） |
 | POST | `/recommendations` | 產生規則式節電建議（含原因與預估節省量） |
 | POST | `/simulate` | 比較修改前後的用電量與電費（不改動原始資料） |
-| GET | `/tariffs` | 取得電價方案與級距（前端做選單／說明頁用） |
-| GET | `/appliances` | 取得家電參考功率、電壓、典型使用時數 |
-| GET | `/health` | 健康檢查 |
+
+**輔助與資料端點**：
+
+| Method | Endpoint | 用途 |
+| --- | --- | --- |
+| GET | `/tariffs` | 電價方案與級距（前端做選單／說明頁用） |
+| GET | `/appliances` | 家電參考功率、電壓、典型使用時數 |
+| GET | `/appliances/presets` | 給介面用的家電庫（含中英名稱）與迴路上限選項 |
+| GET | `/health` | 健康檢查（含版本、電價資料版本、儲存後端） |
+| GET | `/api` | 端點索引（給第一次接觸的人看有哪些路徑） |
+
+**家電儲存與儀表板**（Member B 的資料庫整合，網頁介面就是用這組）：
+
+| Method | Endpoint | 用途 |
+| --- | --- | --- |
+| GET | `/household/appliances` | 讀取已儲存的家電清單 |
+| POST | `/household/appliances` | 新增一台家電 |
+| PUT | `/household/appliances/{id}` | 修改單一台 |
+| DELETE | `/household/appliances/{id}` | 刪除單一台 |
+| PUT | `/household/appliances` | **整批取代**（介面的「儲存我的家電」）|
+| POST | `/household/dashboard` | 一次回傳用電量、電費、負載、建議與摘要（介面主要打這支）|
+
+> `/household/dashboard` 帶 `appliances` 時計算的是**你送來的那份**（給即時編輯用），
+> 不帶則用已儲存的清單。它**不會寫入資料庫** —— 存檔要另外呼叫 `PUT /household/appliances`。
 
 所有錯誤都回傳同一個形狀：
 
@@ -318,10 +377,13 @@ python tools/check_web_ui.py
 }
 ```
 
+`field` 會指出是哪一個欄位出錯，前端直接顯示它就能讓使用者知道要改哪裡。
+
 | HTTP | 代表意義 | 常見 `code` |
 | --- | --- | --- |
 | 422 | 格式或數值不合理 | `validation_error`、`power_not_positive`、`days_out_of_range` |
 | 400 | 語意上無法計算 | `appliance_not_found`、`unknown_plan`、`unsupported_change_field` |
+| 500 | 儲存後端出錯（不會是計算錯誤）| `storage_error` |
 
 ### 3.1 `POST /calculate/consumption`
 
@@ -712,7 +774,23 @@ curl -X POST http://127.0.0.1:8000/simulate \
 - `GET /appliances` — 12 種家電的典型功率區間、電壓、典型使用時數、效率建議與
   `efficient_alternative`。**前端可以用它當輸入表單的預設值與提示**，
   Member B 也可以直接把它當資料表內容。
-- `GET /health` — 回報版本、電價資料版本、家電目錄筆數。
+- `GET /appliances/presets` — 介面用的版本：每筆都同時有 `name_zh`／`name_en`，
+  另附 `circuits`（迴路選項，含電壓與瓦數上限）與預設迴路電流。
+- `GET /health` — 回報版本、電價資料版本、家電目錄筆數，以及**目前實際使用的儲存後端**
+  （`storage` 欄位是 `local` 還是 `supabase`）。
+- `GET /api` — 端點索引，列出所有路徑，方便第一次接觸的人。
+
+### 3.7 家電儲存與儀表板
+
+這組端點是 Member B 的資料庫整合，網頁介面完全靠它（路徑總表見本節開頭）。兩個重點：
+
+1. **`POST /household/dashboard` 不會寫入任何東西。** 帶 `appliances` 時算你送來的那份
+   （給即時編輯用），不帶就用已儲存的清單。要保存請另外呼叫 `PUT /household/appliances`。
+2. **整批取代 vs 單筆**：介面的「儲存我的家電」用 `PUT /household/appliances`（一次換掉整份），
+   單筆的新增／修改／刪除則用帶 `{appliance_id}` 的那三支。
+
+儲存後端由環境變數決定（本機 SQLite 或 Supabase），API 與程式碼完全一樣 ——
+切換方式見 [快速開始](#快速開始) 的「家電存在哪裡」。
 
 ---
 
@@ -786,22 +864,36 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ---
 
-## 5. 測試（以下指令都在 `backend/` 內執行）
+## 5. 測試
+
+> 以下指令都在 `backend/` 內執行。
 
 ```bash
 python -m pytest -q
-# 535 passed
+# 634 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
 | --- | --- | --- |
 | `test_consumption.py` | 53 | 公式、單一／多家電總計、數量、邊界值、各類不合理輸入 |
-| `test_electricity_bill.py` | 92 | 台電範例 800 度、級距邊界、夏月／非夏月、兩個月一期、三種方案、年估算、電價不得寫死、0 度級距、帳單期間限制 |
-| `test_load_estimator.py` | 52 | 歐姆定律、功率因數、單相／三相、安全裕度、超載組合、免責聲明 |
+| `test_electricity_bill.py` | 95 | 台電範例 800 度、級距邊界、夏月／非夏月、兩個月一期、三種方案、年估算、電價不得寫死、0 度級距、帳單期間限制 |
+| `test_load_estimator.py` | 54 | 歐姆定律、功率因數、單相／三相、安全裕度、超載組合、`limit_watts`、免責聲明 |
 | `test_recommendations.py` | 71 | 高耗電辨識、每條規則、中英文名稱比對、同名電器、去重、排序、統計一致性 |
 | `test_simulation.py` | 59 | 前後比較、四種變更類型、**不改動原始資料**、同名家電、改名替換、負載比較 |
 | `test_data_check.py` | 29 | 電價／家電資料檔的完整性檢查（壞檔必須在啟動時就被拒絕） |
-| `test_api.py` | 111 | 五個端點、驗證錯誤形狀、錯誤碼、端點間一致性、啟動驗證、`power_factor`、迴歸案例 |
+| `test_api.py` | 121 | 17 條路由、驗證錯誤形狀、錯誤碼、端點間一致性、啟動驗證、`power_factor`、中英雙語欄位、前端實際送的 payload、迴歸案例 |
+| `test_household_api.py` | 30 | 家電 CRUD 與 `/household/dashboard`（含「儀表板不得改動已存資料」）|
+| `test_web_number_input.py` | 4 | 前端數字輸入的容錯（`150`、`150W`、`1,200`、`6 小時`）|
+| `test_web_i18n.py` | 31 | 中英字典對稱、markup 金鑰、用假 DOM 實際渲染與**按下切換鈕**、HTTP 層的 `_en` 欄位 |
+| `test_portability.py` | 24 | 不得有寫死路徑（換電腦不用改程式）|
+| `test_tariff_import.py` | 7 | `tools/import_tariff.py` 的費率表與 `tariffs.json` 永遠一致 |
+| `test_schema_sql.py` | 15 | `db/schema.sql` 的結構、RLS、可重複執行 |
+| `test_store_supabase.py` | 33 | Supabase 儲存層（用 mock PostgREST，不連真實專案）|
+| `test_api_supabase.py` | 8 | 走 Supabase 後端時的 API 行為 |
+
+> 最後三個是 Supabase 相關測試。它們**不會**連到線上專案：`conftest.py` 會強制
+> `VOLTSPACE_STORAGE=local` 並清掉 Supabase 環境變數，避免測試寫進真實資料庫。
+> 這個保護是被一次真實意外逼出來的（測試曾寫入 3 筆資料到線上表）。
 
 幾個刻意設計的測試：
 
@@ -824,40 +916,15 @@ python -m pytest -q
 
 ### 5.2 效能與程式碼品質優化紀錄
 
-第二輪做了完整的程式碼瀏覽與優化。**先用 `tools/benchmark.py` 量測再改**，避免憑感覺優化。
+第二輪做了完整的程式碼瀏覽與優化，**先用 `tools/benchmark.py` 量測再改**，避免憑感覺優化。
+這一輪的重點其實**不是**榨效能（計算本身只要 0.01–0.37 ms），而是修掉正確性問題與重複邏輯：
 
-**實測改善（8 台家電，中位數）**
+- `generate_recommendations` **−72%**、120 台家電的 `/recommendations` **−58%**
+- 11 項正確性與可維護性修正，包含「0 度時級距圖沒資料」、「電價方案寫死在程式裡」、
+  「資料檔有錯要等第一個請求才炸」
 
-| 項目 | 優化前 | 優化後 | 變化 |
-| --- | --- | --- | --- |
-| `generate_recommendations` | 0.477 ms | 0.132 ms | **−72%** |
-| `POST /recommendations` | 1.217 ms | 0.876 ms | −28% |
-| `POST /recommendations`（120 台家電） | 6.565 ms | 2.784 ms | **−58%** |
-
-其餘端點約 0.5–1.1 ms，120 台家電仍在 3 ms 內 —— 所以這輪的重點**不是**榨效能，
-而是修掉正確性問題與重複邏輯：
-
-| 類別 | 問題 | 處理 |
-| --- | --- | --- |
-| 效能 | 每台家電都重建一次家電別名索引（約 36 筆），且同一台家電被比對兩次 | 索引與名稱正規化加 `lru_cache`；比對結果按字串快取 |
-| 效能 | `catalog_summary()` 只為了取筆數而建出整個 payload | 直接讀 `len(catalog["appliances"])` |
-| 效能 | 模擬時把家電清單 `deepcopy` 兩份 | 只快照一次，modified 由 baseline 複製 |
-| 正確性 | 用電量 0 度時 `lines` 是空陣列，前端畫級距圖會沒資料 | 回傳 1 筆「0 度、費率 X」的示意級距，並標記 `no_consumption` |
-| 正確性 | `flat`／時間電價默默接受 `billing_months: 2`，回應寫「2 個月」卻只算一個月的錢 | 改為回 400 `plan_does_not_support_billing_months` |
-| 正確性 | `PlanId` 是寫死的 Literal，新增電價方案要改程式 | 由 `tariffs.json` 動態產生 enum |
-| 正確性 | 資料檔有錯要等到第一個請求才炸 | 新增 `app/data_check.py`，啟動時驗證（lifespan），壞檔直接拒絕啟動 |
-| 一致性 | 負載估算的 `warnings` 只有英文，其他部分都雙語 | 全部改為 `message_zh` + `message_en` |
-| 死欄位 | `ApplianceLoadOut.power_factor` 永遠是 1.0，因為 request schema 用 `extra="forbid"` 擋掉了 | `ApplianceIn`／`ReplacementIn` 加上 `power_factor`（0.1–1.0），實際套用到電流計算 |
-| 死程式碼 | 未使用的常數、變數、`_cost_per_kwh` 的例外吞掉邏輯、重複的 plan 查詢 | 移除／合併 |
-
-**效能以外的可維護性改善**
-
-- `resolve_season`／`season_label` 可接受 `tariffs` 參數，不再重複解析同一個檔案。
-- `BillBreakdown.as_dict()` 只查一次季節標籤（原本查兩次）。
-- 新增 `tools/lint_unused.py`，目前 `app/` 與 `tools/` **零未使用 import**。
-- 新增 `tests/test_data_check.py`（29 個資料完整性測試）。
-
-**怎麼重現這些數字**
+完整的 before／after 與逐項對照（11 項）見
+[`docs/backend-status.md` 第 9 節](docs/backend-status.md#9-效能)。重現方式：
 
 ```bash
 python tools/benchmark.py 40      # 各函式與端點耗時
@@ -924,7 +991,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 535 passed
+python -m pytest                     # 應該 634 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -933,5 +1000,5 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 535 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 535 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 634 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 634 passed，`/docs` 正常 |
