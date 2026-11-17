@@ -239,6 +239,28 @@ class TestRenderedOutput:
         assert click["backTo"] == "zh"
         assert click["backLabel"] == "EN"
 
+    def test_appliance_added_in_english_shows_in_chinese(self, rendered):
+        """Reported bug: a name added as "Air conditioner" stayed English in Chinese."""
+
+        names = rendered["names"]
+        assert names["zhEnglishStored"] == "冷氣機"
+        assert names["enEnglishStored"] == "Air conditioner"
+
+    def test_appliance_added_in_chinese_shows_in_english(self, rendered):
+        names = rendered["names"]
+        assert names["zhChineseStored"] == "冷氣機"
+        assert names["enChineseStored"] == "Air conditioner"
+
+    def test_custom_appliance_name_is_never_rewritten(self, rendered):
+        names = rendered["names"]
+        assert names["zhCustomUntouched"] == "除濕機"
+        assert names["enCustomUntouched"] == "Dehumidifier"
+
+    def test_plugged_in_list_follows_the_language(self, rendered):
+        plugged = rendered["plugged"]
+        assert "冷氣機" in plugged["zh"]
+        assert "Air conditioner" in plugged["en"]
+
 
 class TestBackendEnglishThroughHttp:
     """The English text must survive the response model.
@@ -311,6 +333,29 @@ class TestBackendEnglishThroughHttp:
             presets = client.get("/appliances/presets").json()
         assert presets["presets"][0].get("name_en")
         assert presets["circuits"][0].get("label_en")
+
+    def test_chinese_titles_use_the_chinese_appliance_name(self):
+        """An appliance stored as "Air conditioner" must not leak into Chinese text."""
+
+        from app.services.recommendations import generate_recommendations
+
+        room = [
+            {
+                "appliance_id": "a1",
+                "name": "Air conditioner",
+                "power_watts": 900,
+                "hours_per_day": 9,
+                "days_per_month": 30,
+                "voltage": 220,
+            }
+        ]
+        recommendations = generate_recommendations(room, month=8)["recommendations"]
+        titles_zh = " ".join(item["title_zh"] for item in recommendations)
+        titles_en = " ".join(item["title_en"] for item in recommendations)
+
+        assert "冷氣機" in titles_zh, "Chinese recommendation titles should name 冷氣機"
+        assert "Air conditioner" not in titles_zh, "English leaked into Chinese titles"
+        assert "Air conditioner" in titles_en
 
 
 class TestNoLeftovers:

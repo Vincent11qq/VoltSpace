@@ -101,10 +101,19 @@ global.clearTimeout = () => 0;
 // argv[1] is this stub, argv[2] is app.js.
 const source = fs.readFileSync(process.argv[2], 'utf8');
 eval(source + '\n;globalThis.__v = { setLanguage, t, pick, monthLabel, bindEvents,'
+  + ' state, rebuildNameIndex, displayName, renderPlugged,'
   + ' get LANG() { return LANG; } };');
 
 const V = globalThis.__v;
 const out = {};
+
+/** All text inside a node, depth first. */
+function textOf(node) {
+  if (!node) return '';
+  let text = node._text || '';
+  for (const child of node.children || []) text += textOf(child);
+  return text;
+}
 
 V.setLanguage('zh');
 out.zh = {
@@ -161,6 +170,36 @@ out.click.taglineAfter = V.t('brand.tagline');
 button.fire('click');
 out.click.backTo = V.LANG;
 out.click.backLabel = button.textContent;
+
+// --- an appliance added in one language must display in the other ----------
+// This is the reported bug: a name added as "Air conditioner" stayed English after
+// switching back to Chinese.
+V.state.presets = [
+  { name_zh: '冷氣機', name_en: 'Air conditioner' },
+  { name_zh: '冰箱', name_en: 'Refrigerator' },
+];
+V.rebuildNameIndex();
+
+out.names = {
+  zhEnglishStored: (V.setLanguage('zh'), V.displayName('Air conditioner')),
+  zhChineseStored: V.displayName('冷氣機'),
+  zhCustomUntouched: V.displayName('除濕機'),
+  enChineseStored: (V.setLanguage('en'), V.displayName('冷氣機')),
+  enEnglishStored: V.displayName('Air conditioner'),
+  enCustomUntouched: V.displayName('Dehumidifier'),
+  unknown: V.displayName(''),
+};
+
+// The plugged-in list must show the localised name too.
+V.state.items = [
+  { name: 'Air conditioner', power_watts: 900, hours_per_day: 9, quantity: 1 },
+];
+V.setLanguage('zh');
+V.renderPlugged();
+out.plugged = { zh: textOf(registry.get('plugged')) };
+V.setLanguage('en');
+V.renderPlugged();
+out.plugged.en = textOf(registry.get('plugged'));
 
 process.stdout.write(JSON.stringify(out));
 """
@@ -242,6 +281,32 @@ def problems(data: dict) -> list[str]:
     check(click.get("backTo") == "zh", "clicking twice did not switch back")
     check(click.get("backLabel") == "EN", "the button label did not return to EN")
 
+    # A name added in one language must display in the other.
+    names = data.get("names", {})
+    check(
+        names.get("zhEnglishStored") == "冷氣機",
+        "an appliance stored as 'Air conditioner' still shows English in Chinese",
+    )
+    check(
+        names.get("enChineseStored") == "Air conditioner",
+        "an appliance stored as 冷氣機 still shows Chinese in English",
+    )
+    check(
+        names.get("zhCustomUntouched") == "除濕機",
+        "a custom appliance name must not be rewritten",
+    )
+    check(
+        names.get("enCustomUntouched") == "Dehumidifier",
+        "a custom appliance name must not be rewritten",
+    )
+
+    plugged = data.get("plugged", {})
+    check("冷氣機" in str(plugged.get("zh", "")), "the plugged-in list is not localised to Chinese")
+    check(
+        "Air conditioner" in str(plugged.get("en", "")),
+        "the plugged-in list is not localised to English",
+    )
+
     return issues
 
 
@@ -276,13 +341,22 @@ def main() -> int:
     print(f"  tagline        {click.get('taglineAfter')}")
     print(f"  click again    -> {click.get('backTo')} ({click.get('backLabel')!r})")
 
+    names = data.get("names", {})
+    plugged = data.get("plugged", {})
+    print("\n--- appliance names follow the language ---")
+    print(f"  stored 'Air conditioner'  zh: {names.get('zhEnglishStored')}   en: {names.get('enEnglishStored')}")
+    print(f"  stored '冷氣機'           zh: {names.get('zhChineseStored')}   en: {names.get('enChineseStored')}")
+    print(f"  custom '除濕機'            zh: {names.get('zhCustomUntouched')}   (unchanged)")
+    print(f"  plugged list             zh: {plugged.get('zh')}")
+    print(f"                           en: {plugged.get('en')}")
+
     print()
     if issues:
         print(f"{len(issues)} problem(s):")
         for issue in issues:
             print("  -", issue)
         return 1
-    print("both languages render, the button switches them, and missing text falls back")
+    print("both languages render, the button switches them, and names follow the language")
     return 0
 
 

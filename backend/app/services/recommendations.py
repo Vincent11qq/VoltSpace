@@ -372,8 +372,11 @@ def generate_recommendations(
         name = str(record.get("name") or "appliance")
         share = (record["_monthly_kwh"] / total_kwh) if total_kwh > 0 else 0.0
         reference = _match_reference(record)
-        # The user may have typed the appliance name in either language; use the
-        # catalogue's English name for English output when we know which appliance it is.
+        # The user may have typed (or added) the appliance name in either language, and a
+        # name entered in English must not leak into Chinese text. Use the catalogue name
+        # for each language when we know which appliance it is; otherwise echo what was
+        # given.
+        name_zh = (reference or {}).get("name_zh") or name
         name_en = (reference or {}).get("name_en") or name
 
         context: dict[str, Any] = {
@@ -402,7 +405,7 @@ def generate_recommendations(
                     key=f"top_consumer_{len(appliance_recommendations)}_{_normalise(name)}",
                     appliance_name=name,
                     appliance_key=record["_key"],
-                    title_zh=f"{name} 是家中用電量最高的電器之一",
+                    title_zh=f"{name_zh} 是家中用電量最高的電器之一",
                     title_en=f"{name_en} is one of the biggest electricity users at home",
                     reason_zh=(
                         f"預估每月用電 {record['_monthly_kwh']:.1f} 度，占全家總用電 {share * 100:.1f}%。"
@@ -499,7 +502,7 @@ def generate_recommendations(
                         key=f"generic_long_hours_{_normalise(name)}",
                         appliance_name=name,
                         appliance_key=record["_key"],
-                        title_zh=f"{name} 每日使用時間偏長",
+                        title_zh=f"{name_zh} 每日使用時間偏長",
                         title_en=f"{name_en} is used for a long time each day",
                         reason_zh=(
                             f"每日使用 {context['hours_per_day']:.1f} 小時、每月 {context['days_per_month']} 天，"

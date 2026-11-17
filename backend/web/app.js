@@ -262,6 +262,34 @@ function pick(zh, en) {
 }
 
 /*
+ * Appliances are stored with whatever name they were added under, so a Chinese user who
+ * added "Air conditioner" would keep seeing English after switching back. The stored name
+ * stays as-is (it is the identity the backend matches on), and only the *display* name is
+ * localised by looking it up in the appliance library, which carries both languages.
+ * A name we do not recognise (a custom appliance) is shown exactly as typed.
+ */
+let nameIndex = new Map();
+
+function rebuildNameIndex() {
+  nameIndex = new Map();
+  for (const preset of state.presets || []) {
+    const zh = preset.name_zh;
+    const en = preset.name_en || preset.name_zh;
+    if (!zh) continue;
+    const entry = { zh, en };
+    nameIndex.set(String(zh).trim().toLowerCase(), entry);
+    if (en) nameIndex.set(String(en).trim().toLowerCase(), entry);
+  }
+}
+
+/** The name to show for a stored appliance name, in the current language. */
+function displayName(name) {
+  const key = String(name ?? "").trim().toLowerCase();
+  const entry = nameIndex.get(key);
+  return entry ? pick(entry.zh, entry.en) : name;
+}
+
+/*
  * Month labels are language-specific rather than a template: Chinese says "7 月" while
  * English names the month. Keeping this in one function avoids a dictionary key whose
  * placeholder would differ between the two languages.
@@ -434,6 +462,7 @@ async function boot() {
   state.plans = tariffs.plans;
   state.planId = tariffs.default_plan_id;
   state.limitAmps = presets.default_circuit_amps;
+  rebuildNameIndex();
 
   buildPlanSelect(tariffs);
   buildMonthSelect();
@@ -529,7 +558,10 @@ function renderPresets() {
 
 function addPreset(preset) {
   state.items.push({
-    name: pick(preset.name_zh, preset.name_en),
+    // Store the catalogue's canonical (Chinese) name, not the label on screen. The same
+    // appliance then has one identity whichever language it was added in, and displayName()
+    // renders it in the current language.
+    name: preset.name_zh,
     category: preset.category,
     power_watts: preset.power_watts,
     hours_per_day: preset.hours_per_day,
@@ -700,7 +732,7 @@ function renderBreakdown(appliances) {
   for (const appliance of sorted) {
     const li = el("li");
     const head = el("div", "bd-head");
-    head.append(el("span", null, appliance.name));
+    head.append(el("span", null, displayName(appliance.name)));
     head.append(
       el(
         "span",
@@ -801,7 +833,7 @@ function renderPlugged() {
         "span",
         null,
         t("plug.line", {
-          name: item.name,
+          name: displayName(item.name),
           w: item.power_watts,
           h: item.hours_per_day,
           qty: item.quantity > 1 ? t("plug.qty", { n: item.quantity }) : "",
