@@ -1,0 +1,32 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# 用法：Render → New → Blueprint → 選這個 repo。部署完再到 Environment 填三個 secret
+# （下方的 sync: false 代表「不要放進 git，部署後手動填」）。
+#
+# 免費方案的容器是**暫時性**的：重新部署或閒置一段時間後，本機 SQLite 的內容會消失。
+# 所以這裡預設接 Supabase（VOLTSPACE_STORAGE=auto = 有設定就用 Supabase）。
+# 部署後開 /health，確認 "storage": "supabase"。
+
+services:
+  - type: web
+    name: voltspace
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start.py --no-browser
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # auto: 有 Supabase 設定就用，沒有就退回本機 SQLite（並在 log 印出原因）。
+      # 想讓「設定錯就啟動失敗」更明顯，改成 supabase。
+      - key: VOLTSPACE_STORAGE
+        value: auto
+      - key: VOLTSPACE_SUPABASE_URL
+        sync: false
+      - key: VOLTSPACE_SUPABASE_SERVICE_KEY
+        sync: false
+      - key: VOLTSPACE_HOUSEHOLD_ID
+        sync: false

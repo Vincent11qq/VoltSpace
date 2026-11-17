@@ -15,7 +15,7 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **641 passed**（約 7 秒）|
+| 測試 | **659 passed**（約 7 秒）|
 | API | 5 個計算端點 + 家電儲存 + 儀表板，共 17 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
@@ -32,6 +32,7 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 - [4. 計算與電價規則](#4-計算與電價規則)
 - [5. 測試](#5-測試)
 - [6. 安裝疑難排解](#6-安裝疑難排解)
+- [7. 部署成網站](#7-部署成網站)
 
 ---
 
@@ -97,6 +98,9 @@ run_app.bat            # Windows：雙擊即可
 > 想知道 backend 目前完成了哪些部分（含功能對照、測試、限制），見
 > [`docs/backend-status.md`](docs/backend-status.md)。
 >
+> **想部署成網站讓別人直接用**（不用下載）：見 [docs/deploy.md](docs/deploy.md) ——
+> 免費的 Cloudflare Tunnel、Render、Docker 三種方式，已附設定檔。
+>
 > 其他文件：[Supabase 整合](backend/docs/supabase.md)（選用）、
 > [程式碼審查紀錄](backend/docs/code-review-audit.md)、
 > [API 規格](backend/docs/openapi.json)。
@@ -160,7 +164,7 @@ VoltSpace/
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   641 個測試（逐檔說明見第 5 節）
+│   ├── tests/                   659 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -290,7 +294,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 641 個測試
+python -m pytest                     # 全部 659 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -873,7 +877,7 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ```bash
 python -m pytest -q
-# 641 passed
+# 659 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -894,6 +898,7 @@ python -m pytest -q
 | `test_store_supabase.py` | 33 | Supabase 儲存層（用 mock PostgREST，不連真實專案）|
 | `test_api_supabase.py` | 8 | 走 Supabase 後端時的 API 行為 |
 | `test_docs_consistency.py` | 7 | 三份文件不得對測試數、Python 比例、相對連結各說各話 |
+| `test_deploy.py` | 18 | 綁定位址（$PORT / 0.0.0.0）、.env 讀取、部署設定檔與金鑰不得入版控 |
 
 > 最後三個是 Supabase 相關測試。它們**不會**連到線上專案：`conftest.py` 會強制
 > `VOLTSPACE_STORAGE=local` 並清掉 Supabase 環境變數，避免測試寫進真實資料庫。
@@ -995,7 +1000,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 641 passed
+python -m pytest                     # 應該 659 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1004,5 +1009,25 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 641 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 641 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 659 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 659 passed，`/docs` 正常 |
+
+---
+
+## 7. 部署成網站
+
+想讓別人**不用下載**就能用，完整步驟見 **[`docs/deploy.md`](docs/deploy.md)**。
+三個方式任選，都不用改程式碼（`start.py` 會自動配合平台的 `$PORT` 與 `0.0.0.0`）：
+
+| 方式 | 網址 | 成本 | 適合 |
+| --- | --- | --- | --- |
+| **Cloudflare Tunnel** | 每次啟動不同 | 免費、不用註冊 | **簡報當天**最快 |
+| **Render**（本 repo 附 `render.yaml`）| 固定 | 免費（閒置會休眠）| 報告裡的連結 |
+| **Docker**（本 repo 附 `Dockerfile`）| 固定 | 免費 | Hugging Face Spaces 等 |
+
+> ⚠️ **雲端容器是暫時性的**：重新部署或閒置回收後，容器內的本機 SQLite 會歸零。
+> 所以部署時要填 Supabase 的三個環境變數，並在部署後確認 `/health` 的
+> `storage` 是 `supabase`（不是 `local-sqlite`）。這也是當初做 Supabase 儲存層的原因。
+>
+> 另外，這個 App **沒有登入機制**，拿到網址的人都能改資料 —— 要限制存取請看
+> `docs/deploy.md` 的「安全提醒」。

@@ -214,6 +214,56 @@ def check_structures(failures: list[str]) -> None:
             failures.append(f"status doc should say {needle!r} for {label}")
 
 
+def fix_counts(failures: list[str]) -> None:
+    """Rewrite stale test counts in the docs to the real number.
+
+    Adding a test changes the number that three documents quote, so this is the one
+    figure that goes stale by doing the right thing. ``--fix`` rewrites it in place
+    instead of making the author hunt for four occurrences.
+    """
+
+    import re
+
+    total = collected_tests()
+    if not total:
+        return
+
+    print(f"\n== fixing test counts to {total} ==")
+    patterns = [
+        (r"(\d{3,4})(\s*passed)", "passed"),
+        (r"(\d{3,4})(\s*個測試)", "tests"),
+        (r"測試（(\d{3,4})(\s*個）)", "paren"),
+        (r"\*\*(\d{3,4})( 個\*\*)", "bold"),
+    ]
+    for path in DOCS:
+        if not path.exists():
+            continue
+        original = path.read_text(encoding="utf-8")
+        lines = original.splitlines(keepends=True)
+        changed = 0
+        for index, line in enumerate(lines):
+            if any(marker in line for marker in ("版本上", "舊版", "先前", "歷史")):
+                continue
+            updated = line
+            for pattern, _kind in patterns:
+                # Replace any 3-4 digit count that is not the real total.
+                def swap(match: re.Match[str]) -> str:
+                    value = int(match.group(1))
+                    if value == total or value < 100:
+                        return match.group(0)
+                    return match.group(0).replace(match.group(1), str(total), 1)
+
+                updated = re.sub(pattern, swap, updated)
+            if updated != line:
+                lines[index] = updated
+                changed += 1
+        if changed:
+            path.write_text("".join(lines), encoding="utf-8")
+            print(f"[FIXED] {path.name}: {changed} line(s)")
+        else:
+            print(f"[OK]    {path.name}")
+
+
 def main() -> int:
     readme = text_of(REPO_ROOT / "README.md")
     integration = text_of(BACKEND_ROOT / "docs" / "integration.md")
@@ -270,6 +320,9 @@ def main() -> int:
     )
     if not ok:
         failures.append("2,977.10 appears outside the historical rate note")
+
+    if "--fix" in sys.argv[1:]:
+        fix_counts(failures)
 
     if "--fast" not in sys.argv[1:]:
         check_structures(failures)

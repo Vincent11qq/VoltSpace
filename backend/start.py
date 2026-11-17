@@ -37,6 +37,10 @@ BACKEND_ROOT = Path(__file__).resolve().parent
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 
+# Hosts that need the app reachable from outside the machine. A platform sets $PORT and
+# routes traffic to 0.0.0.0, so binding the loopback address there accepts no requests.
+PUBLIC_HOST = "0.0.0.0"
+
 # Minimum Python the dependencies support.
 MIN_PYTHON = (3, 10)
 
@@ -434,12 +438,90 @@ def setup_environment() -> int:
     return 0
 
 
+def load_dotenv(path: Path | None = None) -> list[str]:
+    """Read ``backend/.env`` into the environment, without overriding what is already set.
+
+    Deliberately dependency-free and deliberately *not* a full dotenv implementation:
+    ``KEY=VALUE`` per line, ``#`` comments, optional surrounding quotes. Real environment
+    variables always win, so a hosting platform's settings are never silently replaced by
+    a file that happened to be copied along.
+
+    Returns the names it set, so the caller can print them.
+    """
+
+    env_file = path or (BACKEND_ROOT / ".env")
+    if not env_file.is_file():
+        return []
+
+    applied: list[str] = []
+    for raw in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value
+        applied.append(key)
+    return applied
+
+
+def resolve_bind(
+    host: str | None = None, port: int | None = None
+) -> tuple[str, int, bool]:
+    """Work out which address to bind, honouring the conventions of hosting platforms.
+
+    Returns ``(host, port, is_public)``.
+
+    Locally the app should listen on the loopback address so it is not exposed to the
+    network by accident. A hosting platform (Render, Railway, Fly, Hugging Face, ...)
+    instead injects a ``PORT`` environment variable and expects the process to listen on
+    ``0.0.0.0``; binding 127.0.0.1 there makes the health check fail even though the log
+    looks healthy. An explicit ``--host`` / ``--port`` always wins over the environment.
+    """
+
+    env_port = os.environ.get("PORT", "").strip()
+    platform_port = int(env_port) if env_port.isdigit() else None
+
+    resolved_port = port or platform_port or DEFAULT_PORT
+
+    explicit_host = host or os.environ.get("HOST", "").strip() or None
+    if explicit_host:
+        resolved_host = explicit_host
+    elif platform_port is not None:
+        resolved_host = PUBLIC_HOST
+    else:
+        resolved_host = HOST
+
+    is_public = resolved_host not in {HOST, "localhost", "::1"}
+    return resolved_host, resolved_port, is_public
+
+
+def display_url(host: str, port: int) -> str:
+    """The URL to print and open in a browser (0.0.0.0 is not clickable)."""
+
+    shown = HOST if host in {PUBLIC_HOST, "::"} else host
+    return f"http://{shown}:{port}/"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Start the VoltSpace app",
         epilog="First run on a new machine: python start.py --setup",
     )
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="連接埠（預設 8000；雲端平台會用 $PORT）",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="綁定位址（預設 127.0.0.1；有 $PORT 時自動用 0.0.0.0）",
+    )
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--flet", action="store_true", help="also launch the Flet desktop UI")
     parser.add_argument("--check", action="store_true", help="verify the environment and exit")
@@ -457,12 +539,16 @@ def main() -> int:
         return setup_environment()
 
     banner("VoltSpace")
+    # Loading .env before build_env means the storage backend is chosen from it too.
+    dotenv_keys = load_dotenv()
     python, extra = choose_runtime()
     env = build_env(extra)
     print(f"python : {python}")
     if extra.get("EXTRA_LIBS"):
         print(f"libs   : {extra['EXTRA_LIBS']}")
     print(f"data   : {env['VOLTSPACE_DATA_DIR']}")
+    if dotenv_keys:
+        print(f".env   : loaded {', '.join(sorted(dotenv_keys))}")
 
     if args.check:
         from_check = subprocess.run(
@@ -471,27 +557,38 @@ def main() -> int:
         print("\nenvironment OK" if from_check.returncode == 0 else "\nenvironment has problems")
         return from_check.returncode
 
-    port = args.port
+    host, port, is_public = resolve_bind(args.host, args.port)
+    env_port = os.environ.get("PORT", "").strip()
     if not port_free(port):
+        if env_port.isdigit():
+            # The platform routes this exact port; picking another one would silently
+            # break the deployment, so fail loudly instead.
+            print(f"\nport {port} is busy, but $PORT is set - not switching ports")
+            return 1
         replacement = find_free_port(port + 1)
         print(f"\nport {port} is busy; using {replacement} instead")
         port = replacement
 
-    url = f"http://{HOST}:{port}/"
+    url = display_url(host, port)
     command = [
         str(python),
         "-m",
         "uvicorn",
         "app.main:app",
         "--host",
-        HOST,
+        host,
         "--port",
         str(port),
+        # Behind a reverse proxy the client address arrives in X-Forwarded-*, so the
+        # request URL in the logs and in /docs is right.
+        "--proxy-headers",
     ]
     if args.reload:
         command.append("--reload")
 
     banner(f"Serving the app on {url}")
+    if is_public:
+        print(f"listening on {host}:{port} - reachable from other machines\n")
     print("Press Ctrl+C to stop.\n")
     server = subprocess.Popen(command, cwd=str(BACKEND_ROOT), env=env)
 
@@ -499,7 +596,7 @@ def main() -> int:
         if wait_for_health(f"http://{HOST}:{port}/health"):
             print(f"backend ready -> {url}")
             print(f"API docs      -> {url}docs")
-            if not args.no_browser:
+            if not args.no_browser and not is_public:
                 open_browser_later(url)
         else:
             print("backend did not become ready in time; check the log above")
