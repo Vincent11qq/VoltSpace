@@ -5,4 +5,4 @@ This package is intentionally framework-light: the calculation modules under
 database dependency, so they can be unit tested and reused.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
