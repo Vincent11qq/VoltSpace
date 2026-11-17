@@ -449,6 +449,56 @@ class TestLoadEndpoint:
         ).json()
         assert body["load"]["limit_watts"] == pytest.approx(3300.0)
 
+    def test_the_exact_body_the_ui_sends_is_accepted(self, client):
+        """Pin the UI's payload to the request model.
+
+        DashboardRequest uses extra="forbid", so one field the UI sends and the model does
+        not declare turns every calculation into "Extra inputs are not permitted" - which
+        is what happened when the UI started sending circuit_label. Keep this list in step
+        with the body built in web/app.js.
+        """
+
+        body = {
+            "appliances": [
+                {
+                    "name": "冷氣機",
+                    "power_watts": 900,
+                    "hours_per_day": 6,
+                    "days_per_month": 30,
+                    "quantity": 2,
+                    "voltage": 220,
+                }
+            ],
+            "load_limit_amps": 15,
+            "voltage": 220,
+            "circuit_label": "冷氣專用迴路（220V 15A）",
+            "safety_margin": 0.8,
+            "include_recommendations": True,
+            "max_recommendations": 6,
+            "plan_id": "tw_residential_tiered",
+            "month": 11,
+        }
+        response = client.post("/household/dashboard", json=body)
+        assert response.status_code == 200, response.text
+
+        payload = response.json()
+        assert payload["load"]["limit_watts"] == pytest.approx(3300.0)
+        assert payload["load"]["circuit_label"] == "冷氣專用迴路（220V 15A）"
+        assert payload["load"]["voltage_used"] == 220.0
+
+    def test_a_422_names_the_offending_field(self, client):
+        """The UI shows the field name, so it must be in the error body."""
+
+        response = client.post(
+            "/household/dashboard",
+            json={"appliances": [HAIR_DRYER], "bogus_field": 1},
+        )
+        assert response.status_code == 422
+        body = response.json()
+        assert body["code"] == "validation_error"
+        assert body["field"] == "bogus_field"
+        assert body["details"][0]["field"] == "bogus_field"
+
     def test_single_appliance_current(self, client):
         body = client.post(self.URL, json={"appliances": [HAIR_DRYER], "load_limit_amps": 15}).json()
         assert body["estimated_total_current_amps"] == pytest.approx(10.9091, rel=1e-4)

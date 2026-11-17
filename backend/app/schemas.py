@@ -762,6 +762,11 @@ class DashboardRequest(TariffOptions):
         default=None,
         description="住處供電電壓，用於沒有標示電壓的家電（未提供則為 110V）。",
     )
+    circuit_label: str | None = Field(
+        default=None,
+        max_length=120,
+        description="目前選用的迴路名稱（由 UI 帶入），只用於回顯，不影響計算。",
+    )
     breaker_amps: float | None = Field(default=None, gt=0, le=1000)
     safety_margin: float = Field(default=0.8, ge=0.1, le=1.0)
     phases: Literal[1, 3] = Field(default=1)

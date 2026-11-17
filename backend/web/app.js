@@ -377,11 +377,15 @@ async function api(path, { method = "GET", body } = {}) {
     payload = { message: text };
   }
   if (!response.ok) {
-    const error = new Error(
-      (payload && (payload.message || payload.code)) || `HTTP ${response.status}`
-    );
+    // A 422 from Pydantic says "Extra inputs are not permitted" without saying which
+    // input, which is impossible to act on. Include the field the backend named.
+    const detail = (payload && payload.field) ||
+      (payload && Array.isArray(payload.details) && payload.details[0] && payload.details[0].field);
+    const base = (payload && (payload.message || payload.code)) || `HTTP ${response.status}`;
+    const error = new Error(detail ? `${base} (${detail})` : base);
     error.status = response.status;
     error.payload = payload;
+    error.field = detail || null;
     throw error;
   }
   return payload;

@@ -766,6 +766,7 @@ async def household_dashboard(request: Request, payload: DashboardRequest) -> Da
             safety_margin=payload.safety_margin,
             phases=payload.phases,
             breaker_amps=payload.breaker_amps,
+            circuit_label=payload.circuit_label,
         )
 
     recommendations = None
