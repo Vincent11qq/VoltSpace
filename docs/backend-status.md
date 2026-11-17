@@ -239,8 +239,9 @@ backend/
 專案根目錄另含：
 ├── docs/backend-status.md      本文件
 ├── README.md                   總覽與使用說明
-├── frontend/ , prototype/      Member A 的原始 Flet 原型（僅供對照）
-├── Python/ , Supabase/         Member B 的原始成果（已被 backend 取代）
+├── prototype/                  Member A 的原始 Flet 原型（僅供對照）
+├── Python/                     Member B 的原始 Python 模組（已被 backend 取代）
+└── Supabase/member-b-latest/   Member B 最新交付的 SQL（線上專案即用這份）
 ```
 
 **設計原則**
@@ -324,6 +325,24 @@ backend/
 | `resolve_pins.py` / `resolve_deps.py` | 查哪些套件版本有預編譯 wheel |
 | `fetch_wheels.py` / `install_wheels.py` | 完全不需要 pip 的離線安裝 |
 | `check_wheel_availability.py` | 快速檢查單一套件的 wheel |
+
+### Python 比例（課程要求的數字）
+
+用 `tools/python_share.py` 算，它會排除虛擬環境與快取，只算自己寫的程式：
+
+| 算法 | 目前 |
+| --- | --- |
+| 含測試與工具 | **89.00%**（11,844／13,308 行）|
+| 只算產品程式碼（`backend/` 不含 tests/tools）| **77.85%**（5,144／6,608 行）|
+
+非 Python 的部分主要是前端的 `app.js` / `app.css` / `index.html`。
+**要報哪一個，先跟助教確認計算規則** —— 範例簡報上寫的是
+「51.84% including tests/tooling; 42.16% production-only」，
+並註明 *"agree the course counting rule"*。重跑方式：
+
+```bash
+python tools/python_share.py
+```
 
 ---
 

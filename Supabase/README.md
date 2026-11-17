@@ -1,46 +1,50 @@
 # Member B 的 Supabase 成果
 
-這個資料夾保存 Member B 交來的 SQL。分成兩批：
+這個資料夾保存 Member B 交來的 SQL（最新一批），以及我修正過的 `supabase.py`。
 
-| 資料夾 | 內容 | 說明 |
-| --- | --- | --- |
-| `Supabase/` | **最初版本** | 欄位名與單位跟 API 不符，已被取代 |
-| [`member-b-latest/`](member-b-latest/README.md) | **2026-11-13 最新版本** | `appliances.sql` 已修正，**是目前線上專案實際使用的 schema** |
+> 他**最初**交的那四個 SQL（`Appliance` / `Power` / `Minutes` 的舊欄位）已被這批取代，
+> 且已從 repo 移除（`git log -- Supabase/` 仍可找回）。差異整理在下面。
 
-> 目前 Supabase 線上專案是用 `member-b-latest/` 的 SQL 建立的。
-> 後端 `app/store_supabase.py` 讀寫的就是那張表（欄位已驗證一致）。
-
-## 最初版本（`Supabase/`，已被取代）
-
-| 原始檔案 | 現況 |
+| 檔案 | 說明 |
 | --- | --- |
-| `Supabase/appliances.sql` | 欄位名稱與單位與計算 API 不一致（`Appliance`/`Power`/`Minutes`）|
-| `Supabase/profiles.sql` | 可用，但沒有自動建立 profile |
-| `Supabase/security.sql` | RLS 只給 `authenticated`，匿名使用者讀寫全失敗 |
-| `Supabase/connect.sql` | 只是重設 `user_id` 預設值 |
-| `Python/Supabase.py` | import 時就查資料庫並 print；金鑰寫死 → 已清理 |
-| `Python/manager.py` | 金鑰寫死；`power`/`minutes` 與 API 不符 → 已清理 |
-| `Python/validation.py` | 規則比計算核心寬鬆 → 已由計算核心統一 |
+| `appliances.sql` | 建 `appliances` 表 —— **線上專案實際使用的 schema** |
+| `profile.sql` | `profiles` 表 + 註冊時自動建檔的 trigger |
+| `security.sql` | RLS 政策 |
+| `connect.sql` | GRANT + 重載 PostgREST schema cache |
+| `supabase.py` | 他的連線檢查（原檔，含 `_init_` 的錯，保留作對照）|
+| `supabase_fixed.py` | 我修好的可執行版本 |
 
-## `Python/` 那三支的處理
+後端 `app/store_supabase.py` 讀寫的就是這張表，欄位已用
+`tools/check_schema_match.py` 驗證與 `backend/db/schema.sql` 一致。
 
-金鑰已改成環境變數、import 副作用已移除、單位已對齊 API。
-它們保留作為紀錄，但**後端實際使用的是 `backend/app/store.py` 與 `backend/app/store_supabase.py`**。
+## 這批修好了什麼
 
-## 三個實際的問題（以及為什麼要改）
+最初版本 → 現在：
 
-1. **欄位與單位不一致** —— 舊 schema 是 `Appliance` / `Power` / `Minutes`；
-   計算 API 是 `name` / `power_watts` / `hours_per_day`。
-   兩邊都存同一件事卻要轉換，容易出錯，所以 `backend/db/schema.sql` 直接採用 API 的欄位名。
+| 項目 | 最初 | 現在 |
+| --- | --- | --- |
+| 欄位名 | `Appliance` / `Power` / `Minutes` | `name` / `power_watts` / `hours_per_day`（與 `ApplianceIn` 一致）|
+| 單位 | 分鐘 | 小時 |
+| 缺欄位 | 沒有 `days_per_month`、`voltage`、`power_factor` | 都有 |
+| 電價表 | 沒有 | 選用的 `backend/db/optional-tariff-plans.sql` |
 
-2. **沒有電價表** —— 電費計算需要級距資料。新的 schema 有 `tariff_plans`，
-   內容與 `backend/app/data/tariffs.json` 一致。
+## `supabase.py` 的錯誤（已修於 `supabase_fixed.py`）
 
-3. **RLS 讓匿名使用者無法使用** —— 政策是 `to authenticated` 搭配 `auth.uid() = user_id`，
-   但 App 沒有登入流程，所以 `auth.uid()` 是 NULL，新增與讀取都會被拒絕。
-   新 schema 用 `households.access_token` 讓匿名裝置也能安全擁有自己的資料。
+| 行 | 原本 | 應為 |
+| --- | --- | --- |
+| 10 | `def _init_(self):` | `def __init__(self):` |
+| 53 | `if _name_ == "_main_":` | `if __name__ == "__main__":` |
+
+單底線 → 建構子從未被呼叫，所有屬性都不存在（實測 `AttributeError: no attribute 'url'`）。
+另外原本硬性依賴 `python-dotenv`（本專案未安裝），修正版改成選用。
+
+## `Python/` 那三支
+
+Member B 最初交的 Python 模組（金鑰寫死、`power`/`minutes` 單位不符）保留在
+[`../Python/`](../Python/)，作為分工紀錄。金鑰已改成環境變數、import 副作用已移除、
+單位已對齊。**後端實際使用的是 `backend/app/store.py` 與 `backend/app/store_supabase.py`**。
 
 ## 想真的用 Supabase
 
 見 [`../backend/docs/supabase.md`](../backend/docs/supabase.md)。
-執行 `../backend/db/schema.sql` 即可，不需要用這裡的舊檔。
+跑 `../backend/db/schema.sql` 即可（不是用這裡的檔案）。

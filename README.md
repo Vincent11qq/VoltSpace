@@ -136,10 +136,11 @@ VoltSpace/
 │   ├── pytest.ini
 │   ├── requirements.txt         執行後端所需
 │   └── requirements-desktop.txt 選用：Flet 桌面版
-├── frontend/                    Member A 的原始 Flet 原型（Flet 0.x，僅供對照）
-├── prototype/                   同上（對照用快照）
+├── prototype/                   Member A 的原始 Flet 原型（Flet 0.x，僅供對照）
 ├── Python/                      Member B 的原始 Python 模組（已被 backend/app/store.py 取代）
-└── Supabase/                    Member B 的原始 SQL（已被 backend/db/schema.sql 取代）
+└── Supabase/
+    ├── member-b-latest/         Member B 最新交付的 SQL（線上專案即用這份）
+    └── README.md                兩批 SQL 的差異說明
 ```
 
 ---
