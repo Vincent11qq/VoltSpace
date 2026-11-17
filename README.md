@@ -15,12 +15,12 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **634 passed**（約 7 秒）|
+| 測試 | **641 passed**（約 7 秒）|
 | API | 5 個計算端點 + 家電儲存 + 儀表板，共 17 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
 | 啟動時間 | 約 1.3 秒 |
-| Python 比例 | **89.0%**（含測試與工具）、**77.9%**（只算產品程式碼）|
+| Python 比例 | **89%**（含測試與工具）、**78%**（只算產品程式碼）|
 
 ## 目錄
 
@@ -160,7 +160,7 @@ VoltSpace/
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   634 個測試（逐檔說明見第 5 節）
+│   ├── tests/                   641 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -290,7 +290,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 634 個測試
+python -m pytest                     # 全部 641 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -314,10 +314,13 @@ python tools/export_openapi.py
 python tools/export_examples.py
 ```
 
-確認文件裡的數字與程式輸出一致（文件很容易過時，這個會抓出來）：
+確認文件裡的數字與程式輸出一致（文件很容易過時，這個會抓出來）。
+它會跑 `pytest --collect-only` 與 `python_share.py`，所以**測試數和 Python 比例**
+也是它驗的 —— 三個文件（README、integration、backend-status）都會檢查：
 
 ```bash
-python tools/check_docs_numbers.py
+python tools/check_docs_numbers.py           # 完整（約 9 秒）
+python tools/check_docs_numbers.py --fast    # 跳過測試數與比例
 ```
 
 Flet 桌面版與網頁介面的靜態檢查（不開視窗也能驗證）：
@@ -870,7 +873,7 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ```bash
 python -m pytest -q
-# 634 passed
+# 641 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -890,6 +893,7 @@ python -m pytest -q
 | `test_schema_sql.py` | 15 | `db/schema.sql` 的結構、RLS、可重複執行 |
 | `test_store_supabase.py` | 33 | Supabase 儲存層（用 mock PostgREST，不連真實專案）|
 | `test_api_supabase.py` | 8 | 走 Supabase 後端時的 API 行為 |
+| `test_docs_consistency.py` | 7 | 三份文件不得對測試數、Python 比例、相對連結各說各話 |
 
 > 最後三個是 Supabase 相關測試。它們**不會**連到線上專案：`conftest.py` 會強制
 > `VOLTSPACE_STORAGE=local` 並清掉 Supabase 環境變數，避免測試寫進真實資料庫。
@@ -991,7 +995,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 634 passed
+python -m pytest                     # 應該 641 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1000,5 +1004,5 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 634 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 634 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 641 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 641 passed，`/docs` 正常 |

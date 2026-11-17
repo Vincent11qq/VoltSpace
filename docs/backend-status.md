@@ -15,11 +15,11 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 | 項目 | 數字 |
 | --- | --- |
-| 應用程式碼 | 12 個模組，**4,176 行** |
-| 測試程式碼 | 10 個檔案，**3,563 行** |
-| API 端點 | **15 個**（5 個核心 + 6 個儲存 + 4 個參考資料） |
-| 測試 | **535 個**，全數通過（Python 3.12 與 3.14） |
-| 開發工具 | 17 支腳本 |
+| 應用程式碼 | 14 個模組（含 3 個套件 `__init__`）|
+| 測試程式碼 | 17 個檔案 |
+| API 路由 | **17 條**（16 個 JSON 端點 + 1 個網頁介面）|
+| 測試 | **641 個**，全數通過（Python 3.12 與 3.14）|
+| 開發工具 | 21 支腳本 |
 | 電價方案 | 3 種（台電累進、時間電價、租屋單一費率） |
 | 家電參考資料 | 12 種（含典型功率、電壓、使用時數、建議規則） |
 
@@ -31,7 +31,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.1 用電量計算 — ✅ 完成
 
-`app/calculators/consumption.py`（324 行）
+`app/calculators/consumption.py`
 
 - 單一家電用電量：`kWh/月 = W ÷ 1000 × 每日時數 × 每月天數 × 數量`
 - 所有家電總用電量，並計算每台佔比
@@ -42,7 +42,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.2 電費計算 — ✅ 完成
 
-`app/calculators/electricity_bill.py`（451 行）
+`app/calculators/electricity_bill.py`
 
 - **電價資料與程式完全分離**：所有費率在 `app/data/tariffs.json`，
   程式碼裡沒有任何一個費率常值（有測試守著）
@@ -55,7 +55,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.3 節電建議 — ✅ 完成
 
-`app/services/recommendations.py`（653 行）
+`app/services/recommendations.py`
 
 - 找出用電量較高的家電（依佔比分級：≥20% 高、≥10% 中）
 - **規則式**，不需要訓練 AI 模型：比對 `app/data/appliances.json` 的典型值，
@@ -71,7 +71,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.4 情境模擬 — ✅ 完成
 
-`app/services/simulation.py`（467 行）
+`app/services/simulation.py`
 
 - 比較修改前後的用電量與電費
 - 顯示節省度數、節省金額、節省百分比、年度節省金額
@@ -82,7 +82,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.5 電流與負載估算 — ✅ 完成（簡化版）
 
-`app/calculators/load_estimator.py`（355 行）
+`app/calculators/load_estimator.py`
 
 - `I = P ÷ (V × 功率因數)`，支援單相與三相（三相除以 √3）
 - 與使用者輸入的負載上限比較，給四種判定：
@@ -93,7 +93,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ### 2.6 API、驗證與測試 — ✅ 完成
 
-- **FastAPI** 提供 15 個端點，自動產生 OpenAPI 3.1 文件（`/docs` 可互動測試）
+- **FastAPI** 提供 17 條路由（計算 5 條 + 家電儲存與儀表板 6 條 + 參考資料與輔助 5 條 + 網頁介面 1 條），自動產生 OpenAPI 3.1 文件（`/docs` 可互動測試）
 - **Pydantic** 驗證輸入，錯誤統一格式（每個錯誤回應都有這 5 個欄位）：
   `{error, code, message, field, details[]}`
   - **400** = 語意上無法計算（`appliance_not_found`、`invalid_value`）
@@ -104,7 +104,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
   全部錯誤碼只有 4 個：`validation_error`、`invalid_value`、`appliance_not_found`、
   `storage_error`，前端可以據此安全地分流。
-- **pytest** 535 個測試，涵蓋計算函式與 API
+- **pytest** 641 個測試，涵蓋計算函式與 API
 - **API 使用說明**：`README.md` 有每個端點的 curl 範例與完整回應；
   `docs/openapi.json` 可直接匯入 Postman
 - **啟動即驗證資料檔**：電價或家電資料有錯，伺服器直接拒絕啟動
@@ -115,7 +115,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 這些不在作業要求內，但為了讓前端能真的串起來而補的。
 
-### 3.1 家電儲存（`app/store.py`，220 行）
+### 3.1 家電儲存（`app/store.py`）
 
 原本的計算 API 是無狀態的（前端每次送完整清單），這對計算核心是優點，
 但一個真的 App 需要記住清單。所以加了本地 SQLite 儲存：
@@ -169,7 +169,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ---
 
-## 4. API 一覽（15 個端點）
+## 4. API 一覽（17 條路由）
 
 ### 計算（無狀態，純函式）
 
@@ -214,23 +214,25 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
 ```
 backend/
-├── app/                        12 個模組，4,176 行
-│   ├── main.py                 796 行  FastAPI 應用：端點、錯誤處理、生命週期
-│   ├── schemas.py              690 行  Pydantic 模型（32 個 schema）
-│   ├── store.py                220 行  本地 SQLite 儲存
-│   ├── data_check.py           179 行  啟動時資料檔完整性驗證
+├── app/                        14 個模組（含 3 個套件 __init__）
+│   ├── main.py                 FastAPI 應用：端點、錯誤處理、生命週期
+│   ├── schemas.py              Pydantic 模型（32 個 schema）
+│   ├── store.py                本地 SQLite 儲存
+│   ├── store_supabase.py       Supabase（PostgREST）儲存層
+│   ├── storage.py              依環境變數挑選儲存後端
+│   ├── data_check.py           啟動時資料檔完整性驗證
 │   ├── calculators/            ← 純計算，完全不 import FastAPI 或資料庫
-│   │   ├── consumption.py      324 行  用電量 + 輸入驗證
-│   │   ├── electricity_bill.py 451 行  電費（級距／時間電價／單一費率）
-│   │   └── load_estimator.py   355 行  電流與負載
+│   │   ├── consumption.py      用電量 + 輸入驗證
+│   │   ├── electricity_bill.py 電費（級距／時間電價／單一費率）
+│   │   └── load_estimator.py   電流與負載（含 limit_watts）
 │   ├── services/               ← 規則與資料整合
-│   │   ├── recommendations.py  653 行  規則式建議
-│   │   └── simulation.py       467 行  情境模擬
+│   │   ├── recommendations.py  規則式建議（中英雙語）
+│   │   └── simulation.py       情境模擬
 │   └── data/
-│       ├── tariffs.json        5.2 KB  3 種電價方案
-│       └── appliances.json    13.9 KB  12 種家電 + 規則
-├── tests/                      10 個檔案、3,563 行、535 個測試（第 7 節）
-├── tools/                      17 支腳本、2,113 行（第 8 節）
+│       ├── tariffs.json        3 種電價方案
+│       └── appliances.json     12 種家電 + 10 條規則 + 替代機種
+├── tests/                      17 個檔案、641 個測試（第 7 節）
+├── tools/                      21 支腳本（第 8 節）
 ├── db/schema.sql               Supabase/PostgreSQL schema
 ├── docs/                       OpenAPI、整合說明、Supabase 說明、審查紀錄
 ├── start.py / run_app.bat      一鍵啟動（自行偵測 Python，無寫死路徑）
@@ -279,20 +281,32 @@ backend/
 
 ---
 
-## 7. 測試（535 個）
+## 7. 測試（641 個）
 
 | 測試檔 | 數量 | 涵蓋 |
 | --- | --- | --- |
 | `test_consumption.py` | 53 | 公式、總計、數量、邊界值、各類不合理輸入 |
 | `test_electricity_bill.py` | 95 | 台電範例、級距邊界、季節、兩月一期、三方案、0 度、期間限制 |
-| `test_load_estimator.py` | 52 | 歐姆定律、功率因數、單相／三相、安全裕度、超載組合、免責聲明 |
+| `test_load_estimator.py` | 54 | 歐姆定律、功率因數、單相／三相、安全裕度、超載組合、`limit_watts`、免責聲明 |
 | `test_recommendations.py` | 71 | 高耗電辨識、每條規則、名稱比對、同名電器、去重、統計一致 |
 | `test_simulation.py` | 59 | 前後比較、四種變更、**不改動原始資料**、同名、改名替換 |
 | `test_data_check.py` | 29 | 電價／家電資料檔完整性（壞檔必須啟動就被拒） |
 | `test_household_api.py` | 30 | 儲存 CRUD、儀表板聚合、失效回滾 |
-| `test_api.py` | 115 | 端點、錯誤格式、啟動驗證、`power_factor`、UI 一致性、迴歸 |
+| `test_api.py` | 121 | 端點、錯誤格式、啟動驗證、`power_factor`、UI 一致性、雙語欄位、前端實際 payload、迴歸 |
 | `test_portability.py` | 24 | 不得有寫死路徑、啟動器、port 偵測 |
 | `test_tariff_import.py` | 7 | 電價匯入工具與資料檔一致 |
+| `test_schema_sql.py` | 15 | `db/schema.sql` 的結構、RLS、可重複執行 |
+| `test_store_supabase.py` | 33 | Supabase 儲存層（mock PostgREST，不連真實專案）|
+| `test_api_supabase.py` | 8 | 走 Supabase 後端時的 API 行為 |
+| `test_web_i18n.py` | 31 | 中英字典對稱、markup 金鑰、用假 DOM 實際渲染與按下切換鈕、HTTP 的 `_en` 欄位 |
+| `test_web_number_input.py` | 4 | 前端數字輸入容錯（`150`、`150W`、`1,200`、`6 小時`）|
+| `test_docs_consistency.py` | 7 | 三份文件不得對測試數、Python 比例、相對連結各說各話 |
+
+合計 **641**。
+
+> Supabase 那三支**不會**連到線上專案：`conftest.py` 會強制 `VOLTSPACE_STORAGE=local`
+> 並清掉 Supabase 環境變數。這個保護是被一次真實意外逼出來的 —— 測試曾經寫入
+> 3 筆資料到線上表（見 commit `824d132`）。
 
 **幾個刻意設計的測試**
 
@@ -307,7 +321,7 @@ backend/
 
 ---
 
-## 8. 開發工具（17 支）
+## 8. 開發工具（21 支）
 
 | 工具 | 用途 |
 | --- | --- |
@@ -325,15 +339,21 @@ backend/
 | `resolve_pins.py` / `resolve_deps.py` | 查哪些套件版本有預編譯 wheel |
 | `fetch_wheels.py` / `install_wheels.py` | 完全不需要 pip 的離線安裝 |
 | `check_wheel_availability.py` | 快速檢查單一套件的 wheel |
+| `check_schema_match.py` | 比對 `db/schema.sql` 與線上 Supabase 的實際欄位／政策 |
+| `check_web_i18n.py` | 用假 DOM 在 Node 裡實際渲染中英兩種介面 |
+| `supabase_doctor.py` | 連線健檢：DNS、金鑰、資料表、欄位、讀寫 |
+| `python_share.py` | 算 Python 程式碼比例（下面的數字就是它算的）|
 
 ### Python 比例（課程要求的數字）
 
-用 `tools/python_share.py` 算，它會排除虛擬環境與快取，只算自己寫的程式：
+用 `tools/python_share.py` 算，它會排除虛擬環境與快取，只算自己寫的程式。
+比例會隨每次改動小幅浮動（改一行文件也會動），所以這裡只寫**整數百分比**，
+精確數字用下面的指令自己跑：
 
 | 算法 | 目前 |
 | --- | --- |
-| 含測試與工具 | **89.00%**（11,844／13,308 行）|
-| 只算產品程式碼（`backend/` 不含 tests/tools）| **77.85%**（5,144／6,608 行）|
+| 含測試與工具 | **89%** |
+| 只算產品程式碼（`backend/` 不含 tests/tools）| **78%** |
 
 非 Python 的部分主要是前端的 `app.js` / `app.css` / `index.html`。
 **要報哪一個，先跟助教確認計算規則** —— 範例簡報上寫的是
@@ -352,27 +372,30 @@ python tools/python_share.py
 
 **純計算函式**
 
-| 函式 | 中位數 |
-| --- | --- |
-| `calculate_consumption` | 0.078 ms |
-| `calculate_bill`（級距） | 0.010 ms |
-| `estimate_load` | 0.029 ms |
-| `generate_recommendations` | 0.135 ms |
-| `simulate` | 0.367 ms |
+| 函式 | 中位數 | p95 |
+| --- | --- | --- |
+| `calculate_consumption` | 0.078 ms | 0.089 ms |
+| `calculate_bill`（級距） | 0.010 ms | 0.011 ms |
+| `estimate_load` | 0.030 ms | 0.039 ms |
+| `generate_recommendations` | 0.160 ms | 0.198 ms |
+| `simulate` | 0.374 ms | 0.447 ms |
 
 **完整請求路徑（含 FastAPI + Pydantic）**
 
 | 端點 | 中位數 | p95 |
 | --- | --- | --- |
-| `/calculate/consumption` | 1.35 ms | 1.57 ms |
-| `/calculate/cost` | 1.16 ms | 1.43 ms |
-| `/calculate/load` | 1.26 ms | 1.58 ms |
-| `/recommendations` | 1.45 ms | 1.67 ms |
-| `/simulate` | 1.67 ms | 1.98 ms |
-| `/recommendations`（120 台家電） | 3.62 ms | 4.01 ms |
+| `/calculate/consumption` | 1.41 ms | 1.88 ms |
+| `/calculate/cost` | 1.22 ms | 1.51 ms |
+| `/calculate/load` | 1.24 ms | 1.50 ms |
+| `/recommendations` | 1.57 ms | 1.92 ms |
+| `/simulate` | 1.69 ms | 2.10 ms |
+| `/recommendations`（120 台家電） | 3.72 ms | 4.16 ms |
 
 可以看出**計算本身極快（0.01–0.37 ms），其餘都是框架開銷**（驗證、序列化），
 所以優化重點放在計算與資料查找，而不是框架設定。
+
+> 上表是 0.2.0 的單次量測（`python tools/benchmark.py 20`）。數字會隨機器與
+> 背景負載浮動，**看數量級就好**，不要當成保證值。
 
 做過的優化：家電別名索引加 `lru_cache`、比對結果按字串快取、
 避免重複 `deepcopy`、避免為了取筆數而建出整個 payload。
@@ -418,8 +441,8 @@ python tools/python_share.py
 
 | 項目 | 說明 |
 | --- | --- |
-| **多使用者** | 目前沒有登入，資料存在本機 SQLite，一台機器一份。要多使用者需接 Supabase 並開啟登入 |
-| **前端登入流程** | 前端目前匿名使用；Supabase 的 RLS 已設計好 `households.access_token` 方案 |
+| **多使用者** | 沒有登入。本機 SQLite 是一台機器一份；切到 Supabase 時所有列屬於同一個 `household_id`（由 `VOLTSPACE_HOUSEHOLD_ID` 指定），不是一人一份 |
+| **前端登入流程** | 前端匿名使用。`db/schema.sql` 的 RLS 是 `household_id = auth.uid()`，但要真的多使用者還需要登入取得 `auth.uid()`，目前沒有做 |
 | **即時電表資料** | 只做估算，沒有串接實際電表或台電 API |
 | **電價自動更新** | 台電再調價時要手動改 `tools/import_tariff.py` 的費率表再匯入，沒有自動抓取 |
 | **時間電價精確度** | 二段式時間電價是簡化估算，標示為 `is_estimate` |
@@ -466,4 +489,4 @@ run_app.bat
 | 電流負載估算（含警示，不宣稱安全） | ✅ | `app/calculators/load_estimator.py` |
 | FastAPI + Pydantic + pytest | ✅ | `app/main.py`、`app/schemas.py`、`tests/` |
 | API 使用說明 | ✅ | `README.md`、`docs/openapi.json` |
-| 五個指定端點 | ✅ | 見第 4 節（全部實作，另加 10 個輔助端點） |
+| 五個指定端點 | ✅ | 見第 4 節（全部實作，另外還有 11 個 JSON 端點與 1 個網頁介面）|

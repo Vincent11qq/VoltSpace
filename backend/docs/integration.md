@@ -94,8 +94,8 @@ manager.py       Supabase.py    validation.py
 | 問題 | 修正 |
 | --- | --- |
 | B1–B2 | `db/schema.sql`：欄位改成與 `ApplianceIn` 完全一致（`power_watts`, `hours_per_day`, `days_per_month`, `quantity`, `voltage`, `power_factor`），並加上 `CHECK` 約束 |
-| B3 | 新增 `tariff_plans` 表，內容與 `app/data/tariffs.json` 一致，並預先 seed 三個方案 |
-| B4 | 保留 RLS；新增 `households` 表 + `access_token`，讓**匿名裝置也能安全擁有自己的資料**。簽入的使用者仍然用 `auth.uid()` 隔離 |
+| B3 | 電價**不進資料庫**：電價是計算參數，放在 `app/data/tariffs.json`（改電價不用動 schema）。需要放進 DB 時另有選用的 `db/optional-tariff-plans.sql` |
+| B4 | 保留 RLS，但改成以 `household_id` 分組：`household_id` 是純 uuid（沒有 FK），值由 `VOLTSPACE_HOUSEHOLD_ID` 指定，政策是 `household_id = auth.uid()`。（早期版本的 `households` 表 + `access_token` 方案已移除，理由見 `docs/supabase.md`）|
 | B5–B6 | 三個 Python 模組整合成 `app/store.py`，連線延遲建立、沒有 import 副作用、金鑰不進程式碼 |
 | B7–B8 | 儲存與驗證都走計算核心的規則；`app/store.py` 寫入前會先呼叫 `calculate_consumption` 驗證 |
 
@@ -133,7 +133,7 @@ Supabase 的完整 schema 與切換方式見 [`supabase.md`](supabase.md)。
 
 ```bash
 run_app.bat --check                       # 環境 + 資料檔檢查
-python -m pytest                          # 500 個測試
+python -m pytest                          # 641 個測試
 python tools/smoke_app.py                 # 完整使用流程（需伺服器在跑）
 python tools/check_desktop.py             # Flet 介面邏輯（不開視窗）
 python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
@@ -141,7 +141,7 @@ python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
 
 | 檢查 | 結果 |
 | --- | --- |
-| `pytest`（Python 3.14 與 3.12） | **528 passed** |
+| `pytest`（Python 3.14 與 3.12） | **641 passed** |
 | `smoke_app.py`（21 項端對端） | 全部通過 |
 | `check_desktop.py`（Flet 介面邏輯） | 全部通過，12 筆家電庫正常渲染 |
 | `probe_errors.py` | 無 5xx，每個 4xx 都是統一格式 |
