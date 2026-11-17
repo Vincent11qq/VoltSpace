@@ -19,6 +19,10 @@ const state = {
   items: [],        // working list (unsaved edits included)
   savedIds: new Set(),
   limitAmps: 15,
+  // Voltage and label of the selected circuit. The watt ceiling depends on both the amps
+  // and the volts, so the UI must not assume 110 V.
+  circuitVoltage: 110,
+  circuitLabel: null,
   margin: 0.8,
   planId: null,
   month: null,
@@ -514,8 +518,11 @@ function buildCircuitSelect(presets) {
       `${label} (${circuit.amps}A × ${circuit.voltage}V = ${circuit.max_watts}W)`
     );
     option.value = String(circuit.amps);
+    // Remember the voltage for whichever circuit ends up selected.
     if (circuit.amps === (presets.default_circuit_amps || state.limitAmps)) {
       option.selected = true;
+      state.circuitVoltage = circuit.voltage;
+      state.circuitLabel = circuit.label_zh;
     }
     select.append(option);
   }
@@ -642,6 +649,10 @@ async function refresh() {
     const body = {
       appliances: state.items.map(toPayload),
       load_limit_amps: state.limitAmps,
+      // The circuit's voltage decides the watt ceiling: 15 A is 1650 W at 110 V but
+      // 3300 W at 220 V. The backend needs to be told which circuit is in use.
+      voltage: state.circuitVoltage || undefined,
+      circuit_label: state.circuitLabel || undefined,
       safety_margin: state.margin,
       include_recommendations: true,
       max_recommendations: 6,
@@ -694,8 +705,12 @@ function renderDashboard(data) {
   $("status").className = `status ${severity}`.trim();
 
   const totalWatts = data.load ? data.load.total_power_watts : 0;
-  $("watts").textContent = `${Math.round(totalWatts)} W` +
-    (state.limitAmps ? ` / ${Math.round(state.limitAmps * 110)} W` : "");
+  // The ceiling comes from the backend (limit_amps x the circuit's voltage). Multiplying
+  // by a fixed 110 V here would show 1650 W on a 220 V circuit that actually allows 3300 W.
+  const limitWatts = data.load ? data.load.limit_watts : null;
+  $("watts").textContent =
+    `${Math.round(totalWatts)} W` +
+    (limitWatts ? ` / ${Math.round(limitWatts)} W` : "");
   $("amps").textContent = data.load
     ? t("amps.withLimit", {
         a: fmt(summary.estimated_total_current_amps, 2),
@@ -869,6 +884,11 @@ function bindEvents() {
   });
   $("circuit").addEventListener("change", (event) => {
     state.limitAmps = Number(event.target.value);
+    const chosen = state.circuits.find((c) => String(c.amps) === event.target.value);
+    if (chosen) {
+      state.circuitVoltage = chosen.voltage;
+      state.circuitLabel = chosen.label_zh;
+    }
     $("ampsLimit").value = String(state.limitAmps);
     refresh();
   });

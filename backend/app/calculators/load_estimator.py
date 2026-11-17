@@ -332,6 +332,14 @@ def estimate_load(
         "total_apparent_power_va": round(total_va, 2),
         "estimated_total_current_amps": round(total_current, 4),
         "limit_amps": load_limit_amps,
+        # The limit expressed in watts, for the UI to show without doing arithmetic of its
+        # own (it used to multiply by a hard-coded 110 V, which is wrong on a 220 V
+        # circuit). Phases matter: 3-phase carries sqrt(3) x V per amp.
+        "limit_watts": (
+            round(load_limit_amps * resolved_voltage * (3 ** 0.5 if phases == 3 else 1), 2)
+            if load_limit_amps
+            else None
+        ),
         "breaker_amps": breaker_amps,
         "safety_margin": safety_margin,
         "recommended_max_current_amps": (

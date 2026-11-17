@@ -73,6 +73,26 @@ class TestCurrentFormula:
 
 
 class TestLoadEstimate:
+    def test_limit_watts_uses_the_circuit_voltage(self):
+        """15 A is 1650 W at 110 V but 3300 W at 220 V.
+
+        The UI shows "<power> W / <limit> W"; it used to multiply the amps by a hard-coded
+        110 V, so a 220 V circuit was displayed as half its real capacity.
+        """
+
+        for voltage, expected in ((110, 1650.0), (220, 3300.0)):
+            result = estimate_load(
+                [appliance("Air conditioner", 900, 220)],
+                voltage=voltage,
+                load_limit_amps=15,
+            )
+            assert result["voltage_used"] == voltage
+            assert result["limit_watts"] == pytest.approx(expected)
+
+    def test_limit_watts_is_none_without_a_limit(self):
+        result = estimate_load([appliance("Hair dryer", 1200, 110)])
+        assert result["limit_watts"] is None
+
     def test_single_appliance_current_and_totals(self):
         result = estimate_load([appliance("Hair dryer", 1200, 110)], load_limit_amps=15)
         assert result["estimated_total_current_amps"] == pytest.approx(10.9091, rel=1e-4)

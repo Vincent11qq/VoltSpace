@@ -366,6 +366,13 @@ class LoadResponse(BaseModel):
     total_apparent_power_va: float
     estimated_total_current_amps: float
     limit_amps: float | None = None
+    limit_watts: float | None = Field(
+        default=None,
+        description=(
+            "上限換算成瓦特：limit_amps × 迴路電壓（三相再乘 √3）。"
+            "前端直接顯示這個值，不要自行用 110V 相乘。"
+        ),
+    )
     breaker_amps: float | None = None
     safety_margin: float
     recommended_max_current_amps: float | None = None

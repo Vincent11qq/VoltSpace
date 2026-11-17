@@ -116,8 +116,15 @@ class TestServiceEndpoints:
 
         code = re.sub(r"/\*.*?\*/", "", js, flags=re.S)
         code = re.sub(r"^\s*//.*$", "", code, flags=re.M)
-        for forbidden in ("1650", "3.5", "/ 110", "/110"):
+        for forbidden in ("1650", "3.5", "/ 110", "/110", "* 110", "*110"):
             assert forbidden not in code, f"app.js must not hard-code {forbidden!r}"
+
+        # The watt ceiling must come from the backend, which knows the circuit voltage;
+        # multiplying amps by a fixed 110 showed 1650 W on a 220 V / 15 A circuit.
+        assert "limit_watts" in code, "the UI should display the backend's limit_watts"
+        assert "voltage: state.circuitVoltage" in code, (
+            "the UI should tell the backend which circuit voltage is in use"
+        )
         # And it must actually call the calculation API.
         assert "/household/dashboard" in code
 
@@ -415,6 +422,32 @@ class TestCostEndpoint:
 
 class TestLoadEndpoint:
     URL = "/calculate/load"
+
+    def test_limit_watts_follows_the_circuit_voltage(self, client):
+        """The UI shows "<power> W / <limit> W"; the limit must account for the voltage.
+
+        15 A is 1650 W at 110 V and 3300 W at 220 V. This checks the value survives the
+        response model (it did not at first - LoadResponse did not declare the field).
+        """
+
+        for voltage, expected in ((110, 1650.0), (220, 3300.0)):
+            body = client.post(
+                self.URL,
+                json={"appliances": [HAIR_DRYER], "load_limit_amps": 15, "voltage": voltage},
+            ).json()
+            assert body["limit_watts"] == pytest.approx(expected), voltage
+            assert body["voltage_used"] == voltage
+
+    def test_limit_watts_is_null_without_a_limit(self, client):
+        body = client.post(self.URL, json={"appliances": [HAIR_DRYER]}).json()
+        assert body["limit_watts"] is None
+
+    def test_dashboard_load_exposes_limit_watts(self, client):
+        body = client.post(
+            "/household/dashboard",
+            json={"appliances": [HAIR_DRYER], "load_limit_amps": 15, "voltage": 220},
+        ).json()
+        assert body["load"]["limit_watts"] == pytest.approx(3300.0)
 
     def test_single_appliance_current(self, client):
         body = client.post(self.URL, json={"appliances": [HAIR_DRYER], "load_limit_amps": 15}).json()
