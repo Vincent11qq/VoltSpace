@@ -52,3 +52,6 @@ flet-windows.zip*
 
 # Flet desktop client cache (start.py keeps it in the project so no writes go to ~/.flet)
 .flet-home/
+
+# Desktop UI preferences (icon + 'used at the same time'), written at runtime
+desktop_prefs.json
