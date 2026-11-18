@@ -326,6 +326,27 @@ def open_browser_later(url: str, delay: float = 1.0) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
+def flet_cache_env(base: dict[str, str]) -> dict[str, str]:
+    """Point Flet's client cache inside the project instead of the user's home.
+
+    ``flet-desktop`` unpacks its Flutter client into a ``.flet`` folder under
+    ``Path.home()``. On machines where the home directory is not writable - sandboxes,
+    managed devices, some corporate profiles - that unpack fails with a ``PermissionError``
+    on the client directory and the window never opens.
+
+    Redirecting the home directory for *this child process only* keeps the download inside
+    the project, so the desktop UI works without writing anything outside it. The folder is
+    git-ignored and the download (about 100 MB) happens once.
+    """
+
+    home = BACKEND_ROOT / ".flet-home"
+    try:
+        home.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return base
+    return {**base, "USERPROFILE": str(home), "HOME": str(home)}
+
+
 def run_flet(python: Path, env: dict[str, str]) -> int:
     """Try the Flet desktop UI; returns a process exit code."""
 
@@ -368,8 +389,14 @@ def run_flet(python: Path, env: dict[str, str]) -> int:
         return 0
 
     banner("Starting the Flet desktop UI")
+    print(f"client cache: {BACKEND_ROOT / '.flet-home' / '.flet' / 'client'}")
+    print("(first launch downloads ~100 MB there; one time only)\n")
     try:
-        return subprocess.call([str(python), str(flet_app)], cwd=str(BACKEND_ROOT), env=env)
+        return subprocess.call(
+            [str(python), str(flet_app)],
+            cwd=str(BACKEND_ROOT),
+            env=flet_cache_env(env),
+        )
     except OSError as exc:
         print(f"could not start Flet: {exc}")
         return 1

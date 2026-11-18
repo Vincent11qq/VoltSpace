@@ -198,6 +198,31 @@ class TestDesktopRequirements:
         assert "rich" in probe
         assert "fetch_wheels.py" in probe and "install_wheels.py" in probe
 
+    def test_flet_cache_is_redirected_into_the_project(self):
+        """flet-desktop unpacks ~100 MB into Path.home()/.flet.
+
+        On a machine where the home directory is not writable that is a PermissionError
+        (seen in practice). start.py gives the child process a home inside the project
+        instead, so the desktop UI works without writing anywhere else.
+        """
+
+        start = _start_module()
+        env = start.flet_cache_env({"PATH": "x"})
+        assert env["PATH"] == "x", "the rest of the environment must be preserved"
+        for key in ("USERPROFILE", "HOME"):
+            assert key in env, f"{key} must be redirected"
+            # Inside the project, so the sandbox or a locked-down profile cannot block it.
+            assert str(start.BACKEND_ROOT) in env[key]
+
+    def test_run_flet_uses_the_redirected_environment(self):
+        source = (BACKEND / "start.py").read_text(encoding="utf-8")
+        probe = source[source.index("def run_flet") : source.index("def setup_environment")]
+        assert "flet_cache_env(env)" in probe, "the child must get the redirected home"
+
+    def test_flet_cache_dir_is_git_ignored(self):
+        ignore = (REPO / ".gitignore").read_text(encoding="utf-8")
+        assert ".flet-home" in ignore
+
     def test_main_requirements_do_not_include_flet(self):
         """The web UI must stay dependency-free; Flet is optional."""
 

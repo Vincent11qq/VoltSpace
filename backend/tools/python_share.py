@@ -17,7 +17,7 @@ PROJECT = BACKEND.parent
 
 # Never authored by us, or generated.
 SKIP_DIRS = {
-    ".git", ".venv", ".venv314", ".pylibs", ".wheels", ".wheels-flet",
+    ".git", ".venv", ".venv314", ".pylibs", ".wheels", ".wheels-flet", ".flet-home",
     ".data", ".test-data", "__pycache__", "node_modules",
 }
 SKIP_PREFIXES = ("pytest-cache-files-",)

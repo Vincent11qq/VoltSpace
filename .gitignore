@@ -49,3 +49,6 @@ venv/
 
 # Partial Flet client downloads (flet-desktop fetches this on first launch)
 flet-windows.zip*
+
+# Flet desktop client cache (start.py keeps it in the project so no writes go to ~/.flet)
+.flet-home/

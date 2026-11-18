@@ -15,7 +15,7 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **688 passed**（約 7 秒）|
+| 測試 | **691 passed**（約 7 秒）|
 | API | 5 個計算端點 + 家電儲存 + 儀表板，共 17 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
@@ -171,7 +171,7 @@ VoltSpace/
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   688 個測試（逐檔說明見第 5 節）
+│   ├── tests/                   691 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -301,7 +301,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 688 個測試
+python -m pytest                     # 全部 691 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -884,7 +884,7 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ```bash
 python -m pytest -q
-# 688 passed
+# 691 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -1008,7 +1008,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 688 passed
+python -m pytest                     # 應該 691 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1017,8 +1017,8 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 688 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 688 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 691 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 691 passed，`/docs` 正常 |
 
 ---
 
