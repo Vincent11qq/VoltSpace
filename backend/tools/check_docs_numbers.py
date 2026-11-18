@@ -170,6 +170,50 @@ def check_counts(failures: list[str]) -> None:
                 )
 
 
+def fix_share(failures: list[str]) -> None:
+    """Rewrite the quoted Python share when it rounds differently.
+
+    The share moves by a fraction of a percent whenever any file is edited (adding a test
+    moves it too), so the documents quote whole percentages and this keeps them in step.
+    """
+
+    import re
+
+    including, production = python_share()
+    if not including or not production:
+        return
+
+    def percent(value: str) -> str:
+        try:
+            return f"{round(float(value.rstrip('%')))}%"
+        except ValueError:
+            return ""
+
+    targets = (
+        ("含測試與工具", percent(including)),
+        ("只算產品程式碼", percent(production)),
+    )
+    print("\n== fixing the quoted Python share ==")
+    for name in ("README.md", "docs/backend-status.md"):
+        path = REPO_ROOT / name
+        if not path.exists():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+        changed = 0
+        for index, line in enumerate(lines):
+            for marker, expected in targets:
+                if marker in line and expected and expected not in line:
+                    updated = re.sub(r"\d{2}%", expected, line, count=1)
+                    if updated != line:
+                        lines[index] = updated
+                        changed += 1
+        if changed:
+            path.write_text("".join(lines), encoding="utf-8")
+            print(f"[FIXED] {path.name}: {changed} line(s)")
+        else:
+            print(f"[OK]    {path.name}")
+
+
 def structural_counts() -> dict[str, int]:
     """Counts that appear in the docs and are cheap to derive from the tree."""
 
@@ -323,6 +367,7 @@ def main() -> int:
 
     if "--fix" in sys.argv[1:]:
         fix_counts(failures)
+        fix_share(failures)
 
     if "--fast" not in sys.argv[1:]:
         check_structures(failures)

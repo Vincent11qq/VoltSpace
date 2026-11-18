@@ -5,6 +5,7 @@ __pycache__/
 # Empty leftovers seen on Windows sandboxes when pytest could not create its cache
 # directory; harmless, and ``-p no:cacheprovider`` in pytest.ini prevents new ones.
 pytest-cache-files-*/
+pytest-of-*/
 *.egg-info/
 .coverage
 htmlcov/
