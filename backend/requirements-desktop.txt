@@ -3,10 +3,25 @@
 # The web UI needs NONE of this: it is plain HTML/CSS/JS served by the backend at `/`.
 # Install these only if you want the native desktop window (`run_app.bat --flet`).
 #
+#   python -m pip install -r requirements-desktop.txt
+#
 # Flet 1.0 renamed most of the 0.x API. `desktop/app.py` has been migrated to 1.0
 # (ft.Icons, ft.Alignment, ft.Button, ft.Container(shadow=...), ft.run(main)).
+#
+# IMPORTANT — a window needs THREE packages, not one:
+#   flet          the framework / Python API
+#   flet-desktop  the window itself (the Flutter client launcher). Without it, launching
+#                 fails with: "Installing flet-desktop 1.0.5 package... Unable to install"
+#   rich          required by flet-desktop
+#
+# The first time a window opens, flet-desktop downloads the Flutter client (~100 MB) into
+# ~/.flet. That one-time download needs internet; afterwards it runs offline.
+# If the download is impossible, point FLET_VIEW_PATH at an already-downloaded client.
 
 flet==1.0.5
-# Flet's *web* mode additionally needs this package; the desktop (FLET_APP) window does
-# not. It is a ~27 MB wheel because it bundles the Flutter web assets.
+flet-desktop==1.0.5
+rich>=13.0.0
+
+# Flet's *web* mode (a browser tab instead of a window) additionally needs this package.
+# It is a ~27 MB wheel because it bundles the Flutter web assets.
 # flet-web==1.0.5

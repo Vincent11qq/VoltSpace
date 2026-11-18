@@ -46,3 +46,6 @@ venv/
 
 # Do NOT ignore docs/ - openapi.json and examples/*.json are deliverables used by
 # Member A (frontend) and for the presentation.
+
+# Partial Flet client downloads (flet-desktop fetches this on first launch)
+flet-windows.zip*

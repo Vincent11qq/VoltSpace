@@ -334,14 +334,36 @@ def run_flet(python: Path, env: dict[str, str]) -> int:
         print(f"Flet UI not found at {flet_app}")
         return 1
 
+    # `flet` alone is not enough to open a window: the window comes from the separate
+    # `flet-desktop` package (which also needs `rich`). Checking both here turns a
+    # confusing runtime "Unable to install flet-desktop" into an actionable message.
     probe = subprocess.run(
-        [str(python), "-c", "import flet"], cwd=str(BACKEND_ROOT), env=env, capture_output=True
+        [
+            str(python),
+            "-c",
+            "import importlib.util as u\n"
+            "missing = [n for n in ('flet', 'flet_desktop', 'rich') if u.find_spec(n) is None]\n"
+            "print(','.join(missing))\n"
+            "raise SystemExit(1 if missing else 0)\n",
+        ],
+        cwd=str(BACKEND_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
     )
     if probe.returncode != 0:
-        print("\nFlet is not installed for this interpreter, so the desktop UI cannot start.")
-        print("The web UI is unaffected — it is already running at the URL above.")
-        print("\nTo use the desktop UI, install Flet once:")
+        missing = (probe.stdout or "").strip()
+        print("\nThe desktop window needs more than the `flet` package itself.")
+        if missing:
+            print(f"Missing for this interpreter: {missing}")
+        print("The web UI is unaffected — it is already running at the URL above.\n")
+        print("Install the desktop extras once (needs pip):")
         print(f"    {python} -m pip install -r requirements-desktop.txt")
+        print("\nNo pip on this machine? Install the wheels without it:")
+        print(f"    {python} tools\\fetch_wheels.py --dest .wheels flet-desktop==1.0.5 rich")
+        print(f"    {python} tools\\install_wheels.py --src .wheels --dest <site-packages>")
+        print("\nNote: the first window launch downloads the Flutter client (~100 MB) into")
+        print("~/.flet — a one-time step, it needs internet that one time.")
         print("\nServing only the web UI in the meantime.")
         return 0
 

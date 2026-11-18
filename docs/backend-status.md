@@ -18,7 +18,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 | 應用程式碼 | 14 個模組（含 3 個套件 `__init__`）|
 | 測試程式碼 | 19 個檔案 |
 | API 路由 | **17 條**（16 個 JSON 端點 + 1 個網頁介面）|
-| 測試 | **685 個**，全數通過（Python 3.12 與 3.14）|
+| 測試 | **688 個**，全數通過（Python 3.12 與 3.14）|
 | 開發工具 | 21 支腳本 |
 | 電價方案 | 3 種（台電累進、時間電價、租屋單一費率） |
 | 家電參考資料 | 12 種（含典型功率、電壓、使用時數、建議規則） |
@@ -104,7 +104,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
   全部錯誤碼只有 4 個：`validation_error`、`invalid_value`、`appliance_not_found`、
   `storage_error`，前端可以據此安全地分流。
-- **pytest** 685 個測試，涵蓋計算函式與 API
+- **pytest** 688 個測試，涵蓋計算函式與 API
 - **API 使用說明**：`README.md` 有每個端點的 curl 範例與完整回應；
   `docs/openapi.json` 可直接匯入 Postman
 - **啟動即驗證資料檔**：電價或家電資料有錯，伺服器直接拒絕啟動
@@ -231,7 +231,7 @@ backend/
 │   └── data/
 │       ├── tariffs.json        3 種電價方案
 │       └── appliances.json     12 種家電 + 10 條規則 + 替代機種
-├── tests/                      19 個檔案、685 個測試（第 7 節）
+├── tests/                      19 個檔案、688 個測試（第 7 節）
 ├── tools/                      21 支腳本（第 8 節）
 ├── db/schema.sql               Supabase/PostgreSQL schema
 ├── docs/                       OpenAPI、整合說明、Supabase 說明、審查紀錄
@@ -281,7 +281,7 @@ backend/
 
 ---
 
-## 7. 測試（685 個）
+## 7. 測試（688 個）
 
 | 測試檔 | 數量 | 涵蓋 |
 | --- | --- | --- |

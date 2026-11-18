@@ -168,3 +168,45 @@ class TestDeploymentFiles:
             text = (REPO / name).read_text(encoding="utf-8")
             assert "sb_secret_" not in text, f"{name} contains a secret key"
             assert "eyJhbGciOi" not in text, f"{name} contains a JWT"
+
+class TestDesktopRequirements:
+    """Opening a Flet window needs flet-desktop and rich, not just flet.
+
+    This was a real failure: ``run_app.bat --flet`` printed
+    "Installing flet-desktop 1.0.5 package... Unable to install" because only ``flet``
+    was listed. The desktop app itself was fine.
+    """
+
+    def test_desktop_requirements_list_the_window_packages(self):
+        text = (BACKEND / "requirements-desktop.txt").read_text(encoding="utf-8")
+        active = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        joined = " ".join(active)
+        assert "flet==" in joined
+        assert "flet-desktop==" in joined, "without flet-desktop no window can open"
+        assert "rich" in joined, "flet-desktop imports rich"
+
+    def test_start_py_checks_for_the_window_packages(self):
+        """The launcher should say what is missing instead of failing inside Flet."""
+
+        source = (BACKEND / "start.py").read_text(encoding="utf-8")
+        probe = source[source.index("def run_flet") : source.index("def setup_environment")]
+        assert "flet_desktop" in probe
+        assert "rich" in probe
+        assert "fetch_wheels.py" in probe and "install_wheels.py" in probe
+
+    def test_main_requirements_do_not_include_flet(self):
+        """The web UI must stay dependency-free; Flet is optional."""
+
+        text = (BACKEND / "requirements.txt").read_text(encoding="utf-8")
+        active = [
+            line.split("#")[0].strip()
+            for line in text.splitlines()
+            if line.split("#")[0].strip()
+        ]
+        assert not any(line.startswith("flet") for line in active), (
+            "flet belongs in requirements-desktop.txt, not the main requirements"
+        )
