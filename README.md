@@ -52,8 +52,9 @@ run_app.bat --setup            # Windows：建立 .venv 並安裝套件（約 1 
 `.venv` → 執行本程式的解譯器 → `py` → `python` → `python3` → 常見安裝路徑），
 **沒有任何寫死的路徑**，所以複製到任何電腦都能用。
 
-> 版面說明：**最上層只有啟動檔與部署設定**（`run_app.bat`、`Dockerfile`、`render.yaml`），
-> 程式本體全部在 `backend/`。啟動檔只負責挑 Python 並轉呼叫 `backend/start.py`。
+> 版面說明：**最上層只放「怎麼跑」與「怎麼部署」** —— 啟動檔（`run_app.bat` / `run_app.sh`）、
+> 部署設定（`Dockerfile`、`render.yaml`、`.env.example`）、說明文件與 `Supabase/` 的 SQL。
+> **程式本體全部在 `backend/`**；啟動檔只負責挑 Python 並轉呼叫 `backend/start.py`。
 
 ### 之後每次（一樣在專案最上層）
 
@@ -150,7 +151,8 @@ run_app.bat --flet-web
 整個專案資料夾複製過去即可，**不需要修改任何路徑**：
 
 - 程式裡沒有 `C:\Users\...` 這類絕對路徑（`backend/tests/test_portability.py` 會檢查）。
-- `.venv/` 不必一起複製；到新電腦跑一次 `python start.py --setup` 重建即可
+- `.venv/` 不必一起複製；到新電腦跑一次 `run_app.bat --setup`（macOS／Linux 用
+  `./run_app.sh --setup`）重建即可
   （`.venv` 綁定作業系統與 Python 版本，複製過去通常不能用）。
 - 家電資料存在 `backend/.data/voltspace.db`；想保留就一起複製，不想保留刪掉即可。
 
@@ -228,8 +230,8 @@ VoltSpace/
 
 ## 2. 手動安裝與啟動
 
-> **多數情況不需要看這一節。** 上面的 [快速開始](#快速開始) 只要一行
-> `python start.py --setup` 再加 `run_app.bat` 就好了 —— 安裝、挑 Python、開瀏覽器全都自動。
+> **多數情況不需要看這一節。** 上面的 [快速開始](#快速開始) 只要一次 `run_app.bat --setup`，
+> 之後都用 `run_app.bat` 就好了 —— 安裝、挑 Python、開瀏覽器全都自動。
 > 這裡是給「想自己控制虛擬環境」或「一鍵腳本在你的機器上失敗」時用的。
 
 > ### ⚠️ 先看這裡：為什麼連不上 `127.0.0.1:8000/docs`？
