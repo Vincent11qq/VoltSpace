@@ -322,23 +322,6 @@ class Store:
             saved = request("/household/appliances")
         except ApiError as error:
             st["error"] = str(error)
-            st["products"] = []
-            return
-
-        # Product advice is optional: an empty catalogue or no Supabase simply means
-        # nothing to show, never an error banner.
-        try:
-            products = request(
-                "/product-recommendations",
-                method="POST",
-                payload={
-                    "appliances": [to_api(a) for a in st["appliances"]],
-                    **({"plan_id": st["plan_id"]} if st.get("plan_id") else {}),
-                },
-            )
-            st["products"] = products.get("recommendations") or []
-        except ApiError:
-            st["products"] = []
             return
 
         PRESETS[:] = [
@@ -419,6 +402,28 @@ class Store:
         st["load"] = load
         st["recs"] = (dash.get("recommendations") or {}).get("recommendations") or []
         record_safety(st)
+        self._load_products()
+
+    def _load_products(self):
+        """Product advice from /product-recommendations, if any.
+
+        Run after the household is loaded, so the request carries real appliances.
+        An empty catalogue (or no Supabase) just means no product cards - never an error.
+        """
+
+        st = self.st
+        try:
+            answer = request(
+                "/product-recommendations",
+                method="POST",
+                payload={
+                    "appliances": [to_api(a) for a in st["appliances"]],
+                    **({"plan_id": st["plan_id"]} if st.get("plan_id") else {}),
+                },
+            )
+            st["products"] = answer.get("recommendations") or []
+        except ApiError:
+            st["products"] = []
 
     # --- actions ----------------------------------------------------------
     def save(self):
