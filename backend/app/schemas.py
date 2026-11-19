@@ -785,6 +785,7 @@ class DashboardResponse(BaseModel):
     bill: CostResponse
     load: LoadResponse | None = None
     recommendations: RecommendationResponse | None = None
+    product_recommendations: list[dict[str, Any]] = Field(default_factory=list)
     summary: dict[str, Any] = Field(
         default_factory=dict,
         description="給 UI 直接顯示的關鍵數字（總度數、電費、電流、可節省量）。",
