@@ -133,7 +133,7 @@ Supabase 的完整 schema 與切換方式見 [`supabase.md`](supabase.md)。
 
 ```bash
 run_app.bat --check                       # 環境 + 資料檔檢查
-python -m pytest                          # 697 個測試
+python -m pytest                          # 704 個測試
 python tools/smoke_app.py                 # 完整使用流程（需伺服器在跑）
 python tools/check_desktop.py             # Flet 介面邏輯（不開視窗）
 python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
@@ -141,7 +141,7 @@ python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
 
 | 檢查 | 結果 |
 | --- | --- |
-| `pytest`（Python 3.14 與 3.12） | **697 passed** |
+| `pytest`（Python 3.14 與 3.12） | **704 passed** |
 | `smoke_app.py`（21 項端對端） | 全部通過 |
 | `check_desktop.py`（Flet 介面邏輯） | 全部通過，12 筆家電庫正常渲染 |
 | `probe_errors.py` | 無 5xx，每個 4xx 都是統一格式 |

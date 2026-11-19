@@ -520,14 +520,31 @@ async def recommendations_endpoint(
     summary="Generate energy-saving product recommendations",
 )
 async def product_recommendations_endpoint(payload: RecommendationRequest):
-    products = get_products()
-
     appliances = [
         item.model_dump()
         for item in payload.appliances
     ]
 
-    tariff = 4.0  # Temporary default tariff in TWD per kWh
+    # The rate must come from the tariff table, never a constant. That is the rule the rest
+    # of the backend follows (tests/test_electricity_bill.py checks that no rate is written
+    # into the code). Use this household's own consumption so the figure matches
+    # what /calculate/cost reports for the same appliances.
+    consumption = calculate_consumption(appliances)
+    bill = calculate_bill(
+        consumption["total_monthly_kwh"],
+        plan_id=payload.plan_id,
+        month=payload.month,
+    )
+    tariff = bill["effective_rate_per_kwh"]
+
+    # A missing products table or an unconfigured Supabase must not break the endpoint:
+    # product advice is an extra, and the rest of the page still works without it.
+    warning = None
+    try:
+        products = get_products()
+    except RuntimeError as exc:
+        products = []
+        warning = f"product catalogue unavailable: {exc}"
 
     recommendations = get_product_recommendations(
         appliances=appliances,
@@ -535,10 +552,15 @@ async def product_recommendations_endpoint(payload: RecommendationRequest):
         tariff=tariff,
     )
 
-    return {
+    response = {
         "recommendations": recommendations,
         "total": len(recommendations),
+        "rate_per_kwh": round(tariff, 4),
+        "currency": "TWD",
     }
+    if warning:
+        response["warning"] = warning
+    return response
 
 
 # --- 5. Simulation -----------------------------------------------------------

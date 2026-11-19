@@ -393,6 +393,45 @@
         }
       }
     },
+    "/product-recommendations": {
+      "post": {
+        "tags": [
+          "advice"
+        ],
+        "summary": "Generate energy-saving product recommendations",
+        "operationId": "product_recommendations_endpoint_product_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/simulate": {
       "post": {
         "tags": [
@@ -2025,6 +2064,19 @@
             "title": "Voltage",
             "description": "住處供電電壓，用於沒有標示電壓的家電（未提供則為 110V）。"
           },
+          "circuit_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Label",
+            "description": "目前選用的迴路名稱（由 UI 帶入），只用於回顯，不影響計算。"
+          },
           "breaker_amps": {
             "anyOf": [
               {
@@ -2133,6 +2185,14 @@
               }
             ]
           },
+          "product_recommendations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Product Recommendations"
+          },
           "summary": {
             "additionalProperties": true,
             "type": "object",
@@ -2193,6 +2253,19 @@
         ],
         "title": "ErrorResponse",
         "description": "Shape of every 4xx/5xx body VoltSpace returns."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "HealthResponse": {
         "properties": {
@@ -2446,6 +2519,18 @@
               }
             ],
             "title": "Limit Amps"
+          },
+          "limit_watts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Watts",
+            "description": "上限換算成瓦特：limit_amps × 迴路電壓（三相再乘 √3）。前端直接顯示這個值，不要自行用 110V 相乘。"
           },
           "breaker_amps": {
             "anyOf": [
@@ -3768,6 +3853,46 @@
           "plans"
         ],
         "title": "TariffListResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   },

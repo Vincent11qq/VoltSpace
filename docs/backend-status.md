@@ -16,9 +16,9 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 | 項目 | 數字 |
 | --- | --- |
 | 應用程式碼 | 16 個模組（含 3 個套件 `__init__`）|
-| 測試程式碼 | 20 個檔案 |
+| 測試程式碼 | 21 個檔案 |
 | API 路由 | **18 條**（17 個 JSON 端點 + 1 個網頁介面）|
-| 測試 | **697 個**，全數通過（Python 3.12 與 3.14）|
+| 測試 | **704 個**，全數通過（Python 3.12 與 3.14）|
 | 開發工具 | 21 支腳本 |
 | 電價方案 | 3 種（台電累進、時間電價、租屋單一費率） |
 | 家電參考資料 | 12 種（含典型功率、電壓、使用時數、建議規則） |
@@ -104,7 +104,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 
   全部錯誤碼只有 4 個：`validation_error`、`invalid_value`、`appliance_not_found`、
   `storage_error`，前端可以據此安全地分流。
-- **pytest** 697 個測試，涵蓋計算函式與 API
+- **pytest** 704 個測試，涵蓋計算函式與 API
 - **API 使用說明**：`README.md` 有每個端點的 curl 範例與完整回應；
   `docs/openapi.json` 可直接匯入 Postman
 - **啟動即驗證資料檔**：電價或家電資料有錯，伺服器直接拒絕啟動
@@ -185,7 +185,7 @@ Backend 是一個**可獨立執行、可測試、已整合前端**的 FastAPI �
 | --- | --- | --- |
 | POST | `/recommendations` | 產生規則式節電建議 |
 | POST | `/simulate` | 比較修改前後的用電量與電費 |
-| POST | `/product-recommendations` | 依用電量推薦節能產品（資料來自 Supabase 的 products 表）|
+| POST | `/product-recommendations` | 依用電量推薦節能產品；節省金額用 `/calculate/cost` 的有效費率換算（費率只存在電價表），產品清單來自 Supabase 的 `products` 表 |
 
 ### 家電儲存
 
@@ -232,7 +232,7 @@ backend/
 │   └── data/
 │       ├── tariffs.json        3 種電價方案
 │       └── appliances.json     12 種家電 + 10 條規則 + 替代機種
-├── tests/                      19 個檔案、697 個測試（第 7 節）
+├── tests/                      19 個檔案、704 個測試（第 7 節）
 ├── tools/                      21 支腳本（第 8 節）
 ├── db/schema.sql               Supabase/PostgreSQL schema
 ├── docs/                       OpenAPI、整合說明、Supabase 說明、審查紀錄
@@ -282,7 +282,7 @@ backend/
 
 ---
 
-## 7. 測試（697 個）
+## 7. 測試（704 個）
 
 | 測試檔 | 數量 | 涵蓋 |
 | --- | --- | --- |
@@ -304,6 +304,7 @@ backend/
 | `test_docs_consistency.py` | 7 | 三份文件不得對測試數、Python 比例、相對連結各說各話 |
 | `test_deploy.py` | 18 | 綁定位址（$PORT / 0.0.0.0）、.env 讀取、部署設定檔與金鑰不得入版控 |
 | `test_mobile.py` | 6 | 手機路徑：Flet 開成網頁、只綁 0.0.0.0、只開一個埠、flet-web 安裝提示 |
+| `test_product_recommendations.py` | 7 | 產品建議：費率取自電價表（不得寫死）、與 `/calculate/cost` 一致、型錄壞掉不影響其他功能 |
 | `test_desktop_app.py` | 26 | 桌面版的資料層：API 對應、verdict 用語、金額分攤、離線時不崩潰、不得再寫死費率 |
 
 合計 **641**。
