@@ -1,6 +1,10 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
-# 用法：Render → New → Blueprint → 選這個 repo。部署完再到 Environment 填三個 secret
+# 兩個服務，各自一個網址：
+#   voltspace       FastAPI：計算 API + 網頁版介面（backend/web）＋ /docs
+#   voltspace-flet  同一份 App 的 Flet 介面，開成網頁（Member A 的設計）
+#
+# 用法：Render → New → Blueprint → 選這個 repo。部署完再到各自的 Environment 填 secret
 # （下方的 sync: false 代表「不要放進 git，部署後手動填」）。
 #
 # 免費方案的容器是**暫時性**的：重新部署或閒置一段時間後，本機 SQLite 的內容會消失。
@@ -8,6 +12,7 @@
 # 部署後開 /health，確認 "storage": "supabase"。
 
 services:
+  # --- 1. API + 網頁版 -------------------------------------------------------
   - type: web
     name: voltspace
     runtime: python
@@ -30,3 +35,30 @@ services:
         sync: false
       - key: VOLTSPACE_HOUSEHOLD_ID
         sync: false
+
+  # --- 2. 同一份 App 的 Flet 介面，開成網頁 ----------------------------------
+  # Flet 的 web 模式就是一個普通的 Python 網頁服務：Python 跑在 Render，瀏覽器只負責
+  # 畫面。它自己不含計算，所以要靠 VOLTSPACE_API 指到上面那個服務才有資料。
+  # 下面的網址若你的服務名稱不同，請一併改成 https://<你的服務>.onrender.com。
+  - type: web
+    name: voltspace-flet
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements-flet-web.txt
+    startCommand: python desktop/app.py
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: VOLTSPACE_FLET_WEB
+        value: "1"
+      - key: VOLTSPACE_FLET_HOST
+        value: "0.0.0.0"
+      # 平台會注入 PORT；desktop/app.py 會自動沿用它，所以不用在這裡指定埠。
+      - key: VOLTSPACE_API
+        value: https://voltspace-7y2w.onrender.com
+      # 這個服務只負責畫面，資料由 API 服務處理（Supabase 的設定在那邊）。
+      - key: VOLTSPACE_STORAGE
+        value: local

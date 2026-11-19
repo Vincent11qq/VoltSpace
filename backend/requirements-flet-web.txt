@@ -1,0 +1,19 @@
+# VoltSpace — Flet UI as a web service (for hosting one page that runs the Flet app)
+#
+# Use this when you want the Flet interface on its own URL, e.g. a second Render service,
+# so a phone can open it without anything installed.
+#
+#   VOLTSPACE_FLET_WEB=1 python desktop/app.py
+#
+# Requirements are deliberately smaller than requirements-desktop.txt: a hosted web page
+# needs the framework and the web assets, not the desktop window (flet-desktop downloads a
+# ~100 MB Flutter binary that a server never displays).
+#
+# The backend is NOT part of this image. Point VOLTSPACE_API at it:
+#
+#   VOLTSPACE_API=https://<your-api-service>.onrender.com
+#
+# The Python side runs on the server, so that URL is fetched from the server, not the browser.
+
+flet==1.0.5
+flet-web==1.0.5

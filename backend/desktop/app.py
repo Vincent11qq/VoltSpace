@@ -956,19 +956,22 @@ def main(page: ft.Page):
 def run() -> None:
     """Open the UI as a window, or serve it as a web page for phones and other devices.
 
-    Flet web mode keeps the Python side on this machine: the phone only renders. That means
-    the app can still call the backend at 127.0.0.1:8000 - nothing has to be exposed except
-    the Flet port itself.
+    Flet web mode keeps the Python side on the machine that runs this file: the browser only
+    renders. That means the app can call the backend at 127.0.0.1:8000 locally, or at any
+    URL when it is hosted (set VOLTSPACE_API).
 
     Environment:
         VOLTSPACE_FLET_WEB=1        serve as a web page instead of opening a window
         VOLTSPACE_FLET_HOST         bind address (default 0.0.0.0, so a phone can reach it)
-        VOLTSPACE_FLET_PORT         port (default 8550)
+        VOLTSPACE_FLET_PORT         port (defaults to $PORT when a host sets it, else 8550)
+        VOLTSPACE_API               backend base URL (default http://127.0.0.1:8000)
     """
 
     if os.environ.get("VOLTSPACE_FLET_WEB", "").strip() not in {"", "0"}:
         host = os.environ.get("VOLTSPACE_FLET_HOST", "0.0.0.0")
-        port = int(os.environ.get("VOLTSPACE_FLET_PORT", "8550"))
+        # A hosting platform (Render, Railway, ...) injects PORT and expects the process to
+        # listen there; falling back to it means the start command needs no arguments.
+        port = int(os.environ.get("VOLTSPACE_FLET_PORT") or os.environ.get("PORT") or "8550")
         ft.run(
             main,
             assets_dir="assets",

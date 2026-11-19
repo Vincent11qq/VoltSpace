@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 BACKEND = Path(__file__).resolve().parent.parent
+REPO = BACKEND.parent
 
 
 def _start_module():
@@ -59,3 +60,35 @@ class TestFletWebMode:
     def test_requirements_desktop_mentions_web_mode(self):
         text = (BACKEND / "requirements-desktop.txt").read_text(encoding="utf-8")
         assert "flet-web" in text
+class TestHostedFletPage:
+    """Deploying the Flet UI as its own web service (a second Render service)."""
+
+    def test_port_falls_back_to_the_platform_port(self):
+        """Render injects PORT; the start command should need no arguments."""
+
+        source = (BACKEND / "desktop" / "app.py").read_text(encoding="utf-8")
+        assert 'os.environ.get("VOLTSPACE_FLET_PORT") or os.environ.get("PORT")' in source
+
+    def test_web_only_requirements_exist_and_are_small(self):
+        text = (BACKEND / "requirements-flet-web.txt").read_text(encoding="utf-8")
+        active = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        assert any(line.startswith("flet==") for line in active)
+        assert any(line.startswith("flet-web==") for line in active)
+        # A server never opens a window, so the 100 MB desktop client must not be pulled in.
+        assert not any(line.startswith("flet-desktop") for line in active)
+        assert not any(line.startswith("rich") for line in active)
+
+    def test_blueprint_declares_the_flet_service(self):
+        text = (REPO / "render.yaml").read_text(encoding="utf-8")
+        assert "voltspace-flet" in text
+        assert "requirements-flet-web.txt" in text
+        assert "startCommand: python desktop/app.py" in text
+        assert "VOLTSPACE_FLET_WEB" in text
+        # The page gets its numbers from the API service.
+        assert "VOLTSPACE_API" in text
+        # Two services, each with a health check.
+        assert text.count("healthCheckPath:") == 2

@@ -55,3 +55,6 @@ flet-windows.zip*
 
 # Desktop UI preferences (icon + 'used at the same time'), written at runtime
 desktop_prefs.json
+
+# Flet 與 pytest 在專案裡留下的隨機命名暫存資料夾
+backend/tmp*/

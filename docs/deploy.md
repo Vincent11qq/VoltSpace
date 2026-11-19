@@ -97,6 +97,35 @@ cloudflared tunnel --url http://127.0.0.1:8000
 > 並綁定 `0.0.0.0`（直接跑 `uvicorn app.main:app` 沒有這層處理也可以，但就少了
 > 環境檢查與清楚的錯誤訊息）。
 
+### B-3 讓 Flet 版也有自己的網址（選用）
+
+上面部署的是 `backend/web/` 的網頁版。如果你想讓 **Flet 那套介面**（Member A 的新設計）
+也有一個可以直接打開的網址（例如手機傳連結給助教），再加**第二個服務**：
+
+| 欄位 | 值 |
+| --- | --- |
+| Environment | `Python` |
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements-flet-web.txt` |
+| Start Command | `python desktop/app.py` |
+| Health Check Path | `/` |
+| `VOLTSPACE_FLET_WEB` | `1` |
+| `VOLTSPACE_FLET_HOST` | `0.0.0.0` |
+| `VOLTSPACE_API` | `https://<你的第一個服務>.onrender.com` |
+| `VOLTSPACE_STORAGE` | `local`（這個服務只畫畫面，資料由 API 服務處理）|
+
+`render.yaml` 裡已經寫好這第二個服務（`voltspace-flet`），用 Blueprint 會自動建立。
+
+**運作方式**：Flet 的 web 模式是一個普通的 Python 網頁服務 —— Python 跑在 Render，
+瀏覽器只負責畫面。它本身不含計算，所以每個請求都回到 `VOLTSPACE_API` 指的那個服務。
+
+> **要確認的事項**：`PORT` 由平台注入，`desktop/app.py` 會自動沿用（不用在指令裡指定）。
+> 這個服務不含 `flet-desktop`（那是開視窗用的約 100 MB 客戶端，伺服器永遠不會顯示視窗），
+> 所以啟動比第一個服務快。
+>
+> **限制**：免費方案一樣會休眠，而且 Flet 這一頁要等 Flutter 的 web 客戶端載入，
+> 第一次打開比網頁版慢。**簡報用的主要連結建議仍用網頁版**，Flet 版當「設計展示」。
+
 ---
 
 ## C. Docker（Hugging Face Spaces 或任何容器主機）
@@ -131,6 +160,7 @@ secret 在 Space 的 **Settings → Variables and secrets** 填。
 | 中英切換 | 右上角 `EN` / `中文` 能切，而且重新載入後還記得 |
 | API 文件 | `/docs` 打得開 |
 | 多一台裝置 | 用手機開同一個網址，看得到同一份清單（代表真的存在 Supabase）|
+| Flet 版（選用）| 開 `voltspace-flet` 的網址，畫面是 Flet 介面，數字與網頁版一致 |
 
 ---
 

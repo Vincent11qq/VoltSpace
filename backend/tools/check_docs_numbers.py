@@ -175,6 +175,13 @@ def fix_share(failures: list[str]) -> None:
 
     The share moves by a fraction of a percent whenever any file is edited (adding a test
     moves it too), so the documents quote whole percentages and this keeps them in step.
+
+    A line can carry both figures, and the marker may sit before or after its number:
+
+        **89%**（含測試與工具）、**78%**（只算產品程式碼）
+        | 含測試與工具 | **89%** |
+
+    so each marker is paired with the closest percentage in a small window around it.
     """
 
     import re
@@ -201,12 +208,28 @@ def fix_share(failures: list[str]) -> None:
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         changed = 0
         for index, line in enumerate(lines):
+            updated = line
             for marker, expected in targets:
-                if marker in line and expected and expected not in line:
-                    updated = re.sub(r"\d{2}%", expected, line, count=1)
-                    if updated != line:
-                        lines[index] = updated
-                        changed += 1
+                if not expected or marker not in updated:
+                    continue
+                at = updated.index(marker)
+                window_start = max(0, at - 16)
+                window = updated[window_start : at + len(marker) + 16]
+                # the number closest to the marker, before it first then after it
+                before = [
+                    m for m in re.finditer(r"(\d{2})%", window) if m.start() < at - window_start
+                ]
+                after = [
+                    m for m in re.finditer(r"(\d{2})%", window) if m.start() > at - window_start
+                ]
+                pick = before[-1] if before else (after[0] if after else None)
+                if pick is None or pick.group(1) + "%" == expected:
+                    continue
+                absolute = window_start + pick.start()
+                updated = updated[:absolute] + expected + updated[absolute + len(pick.group(0)) :]
+            if updated != line:
+                lines[index] = updated
+                changed += 1
         if changed:
             path.write_text("".join(lines), encoding="utf-8")
             print(f"[FIXED] {path.name}: {changed} line(s)")
