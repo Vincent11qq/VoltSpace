@@ -242,8 +242,6 @@ backend/
 專案根目錄另含：
 ├── docs/backend-status.md      本文件
 ├── README.md                   總覽與使用說明
-├── prototype/                  Member A 的原始 Flet 原型（僅供對照）
-├── Python/                     Member B 的原始 Python 模組（已被 backend 取代）
 └── Supabase/member-b-latest/   Member B 最新交付的 SQL（線上專案即用這份）
 ```
 

@@ -36,7 +36,7 @@ LANGUAGES = {
 }
 
 # Third-party snapshots kept for reference, not authored by this team.
-REFERENCE_DIRS = {"prototype", "Python", "Supabase"}
+REFERENCE_DIRS = {"Supabase"}
 
 
 def counted_lines(path: Path) -> int:

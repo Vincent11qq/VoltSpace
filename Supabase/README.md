@@ -2,8 +2,10 @@
 
 這個資料夾保存 Member B 交來的 SQL（最新一批），以及我修正過的 `supabase.py`。
 
-> 他**最初**交的那四個 SQL（`Appliance` / `Power` / `Minutes` 的舊欄位）已被這批取代，
-> 且已從 repo 移除（`git log -- Supabase/` 仍可找回）。差異整理在下面。
+> 他**最初**交的四個 SQL（`Appliance` / `Power` / `Minutes` 的舊欄位）與三支 Python 模組
+> （金鑰寫死、`power` / `minutes` 單位不符）都已被取代，並已從 repo 移除。
+> 需要對照時可用 `git log --diff-filter=A -- Supabase/` 找回當初的 commit。
+> 差異整理在下面。
 
 | 檔案 | 說明 |
 | --- | --- |
@@ -27,6 +29,7 @@
 | 單位 | 分鐘 | 小時 |
 | 缺欄位 | 沒有 `days_per_month`、`voltage`、`power_factor` | 都有 |
 | 電價表 | 沒有 | 選用的 `backend/db/optional-tariff-plans.sql` |
+| 金鑰位置 | 寫死在程式碼裡 | 環境變數（`.env` 或平台的設定）|
 
 ## `supabase.py` 的錯誤（已修於 `supabase_fixed.py`）
 
@@ -37,12 +40,6 @@
 
 單底線 → 建構子從未被呼叫，所有屬性都不存在（實測 `AttributeError: no attribute 'url'`）。
 另外原本硬性依賴 `python-dotenv`（本專案未安裝），修正版改成選用。
-
-## `Python/` 那三支
-
-Member B 最初交的 Python 模組（金鑰寫死、`power`/`minutes` 單位不符）保留在
-[`../Python/`](../Python/)，作為分工紀錄。金鑰已改成環境變數、import 副作用已移除、
-單位已對齊。**後端實際使用的是 `backend/app/store.py` 與 `backend/app/store_supabase.py`**。
 
 ## 想真的用 Supabase
 

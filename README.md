@@ -7,7 +7,7 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 成員 | 負責 | 放在哪裡 |
 | --- | --- | --- |
 | **Member C（喬元震）** | 計算核心：用電量、電費、負載、建議、模擬 | `backend/app/` |
-| **Member A（郭潼）** | 介面：原 Flet 原型 → 修正後改接後端 | `backend/web/`、`backend/desktop/`（原型存於 `prototype/`）|
+| **Member A（郭潼）** | 介面：原 Flet 原型 → 修正後改接後端 | `backend/web/`、`backend/desktop/` |
 | **Member B（呂婉菲）** | 資料庫：Supabase schema 與連線 | `backend/db/schema.sql`、`Supabase/member-b-latest/` |
 
 **目前狀態**（數字都是實測，可用文末指令重現）
@@ -219,8 +219,6 @@ VoltSpace/
 │   ├── requirements.txt         執行後端所需
 │   └── requirements-desktop.txt 選用：Flet 桌面版
 ├── docs/backend-status.md       後端完成度、測試與限制的總整理
-├── prototype/                   Member A 的原始 Flet 原型（Flet 0.x，僅供對照）
-├── Python/                      Member B 的原始 Python 模組（已被 backend/app/store.py 取代）
 └── Supabase/
     ├── member-b-latest/         Member B 最新交付的 SQL（線上專案即用這份）
     └── README.md                兩批 SQL 的差異與修正說明

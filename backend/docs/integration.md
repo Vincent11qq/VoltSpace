@@ -71,10 +71,10 @@
 
 ### 交付內容
 
-```
-appliances.sql   profiles.sql   security.sql   connect.sql
-manager.py       Supabase.py    validation.py
-```
+四個 SQL 檔（`appliances` / `profiles` / `security` / `connect`）與三支 Python 模組（`manager.py` / `Supabase.py` / `validation.py`）。
+
+> 這些原始檔已從 repo 移除（內容都已被修正版取代，見下表）；需要對照時可用
+> `git log --diff-filter=A -- Python/` 找到當初的 commit 再取回。
 
 ### 發現的問題
 

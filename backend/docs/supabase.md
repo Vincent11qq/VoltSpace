@@ -49,8 +49,8 @@ Member B 最初交的 `appliances.sql` / `security.sql` 有兩個問題：
 
 ## 2. 環境變數
 
-Supabase 的連線資訊**不要寫進程式碼**（原本的 `manager.py` 與 `Supabase.py`
-各寫了一次金鑰）。
+Supabase 的連線資訊**不要寫進程式碼**（Member B 最初交來的 Python 模組各寫了一次
+金鑰，那些檔案已移除）。
 
 ```bash
 VOLTSPACE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
