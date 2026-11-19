@@ -15,12 +15,12 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **691 passed**（約 7 秒）|
-| API | 5 個計算端點 + 家電儲存 + 儀表板，共 17 條路由 |
+| 測試 | **697 passed**（約 7 秒）|
+| API | 5 個計算端點 + 家電儲存 + 儀表板 + 產品建議，共 18 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
 | 啟動時間 | 約 1.3 秒 |
-| Python 比例 | **90%**（含測試與工具）、**78%**（只算產品程式碼）|
+| Python 比例 | **79%**（含測試與工具）、**78%**（只算產品程式碼）|
 
 ## 目錄
 
@@ -68,6 +68,7 @@ run_app.bat            # Windows：雙擊即可
 | `run_app.bat --check` | 只檢查環境與資料檔，不啟動 |
 | `run_app.bat --port 8080` | 換連接埠（網址變成 `:8080`） |
 | `run_app.bat --flet` | 同時開 Flet 桌面版（需 `requirements-desktop.txt`） |
+| `run_app.bat --flet-web` | **把 Flet 介面開成網頁**，手機／平板用瀏覽器開（預設埠 8550）|
 
 > **桌面版要三個套件才算裝好**：`flet` + `flet-desktop`（開視窗用）+ `rich`
 > （`flet-desktop` 的相依）。只裝 `flet` 會看到
@@ -75,6 +76,35 @@ run_app.bat            # Windows：雙擊即可
 > 一次裝好：`python -m pip install -r requirements-desktop.txt`。
 > 第一次開視窗時 `flet-desktop` 會下載 Flutter 客戶端（約 100 MB，只需一次）。
 > 網頁版完全不需要這些。
+
+### 用手機看（同一個 Wi-Fi，不用裝 App）
+
+```powershell
+cd backend
+run_app.bat --flet-web
+```
+
+它會同時啟動後端與 Flet，並印出兩個網址：
+
+```
+  this machine : http://127.0.0.1:8550/
+  same Wi-Fi   : http://192.168.x.x:8550/    <- 手機用這個
+```
+
+手機（同一個 Wi-Fi）用瀏覽器開第二個網址，就是 Member A 的新介面，**不是**網頁版那一套。
+平板、另一台電腦也一樣。
+
+- **Python 還是在電腦上跑**，手機只負責畫面 —— 所以 App 呼叫後端仍然走 `127.0.0.1:8000`，
+  你不需要把 API 開放出去，也不會多一個 CORS 問題。
+- 只需要開放 **8550** 這一個埠。Windows 第一次會問防火牆，選「允許私人網路」。
+- 手機連不到？先確認兩台在同一個 Wi-Fi（手機用行動網路不行），
+  再確認防火牆允許 8550。
+- 想讓**不同網路**的人也能開，把 Cloudflare Tunnel 指向 8550：
+  `cloudflared tunnel --url http://127.0.0.1:8550`（做法同 [`docs/deploy.md`](docs/deploy.md)）。
+
+> 單純要「在手機上看得到」其實還有更省事的一條：直接開 [已部署的網站](https://voltspace-7y2w.onrender.com/)，
+> 那是 `backend/web/` 的網頁版（不裝任何東西、手機原生可用）。`--flet-web` 是為了展示
+> Member A 的 Flet 設計。
 
 | 網址 | 內容 |
 | --- | --- |
@@ -171,7 +201,7 @@ VoltSpace/
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
 │   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   691 個測試（逐檔說明見第 5 節）
+│   ├── tests/                   697 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -301,7 +331,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 691 個測試
+python -m pytest                     # 全部 697 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -884,7 +914,7 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ```bash
 python -m pytest -q
-# 691 passed
+# 697 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -906,6 +936,7 @@ python -m pytest -q
 | `test_api_supabase.py` | 8 | 走 Supabase 後端時的 API 行為 |
 | `test_docs_consistency.py` | 7 | 三份文件不得對測試數、Python 比例、相對連結各說各話 |
 | `test_deploy.py` | 18 | 綁定位址（$PORT / 0.0.0.0）、.env 讀取、部署設定檔與金鑰不得入版控 |
+| `test_mobile.py` | 6 | 手機路徑：Flet 開成網頁、只綁 0.0.0.0、只開一個埠、flet-web 安裝提示 |
 | `test_desktop_app.py` | 26 | 桌面版的資料層：API 對應、verdict 用語、金額分攤、離線時不崩潰、不得再寫死費率 |
 
 > 最後三個是 Supabase 相關測試。它們**不會**連到線上專案：`conftest.py` 會強制
@@ -1008,7 +1039,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 691 passed
+python -m pytest                     # 應該 697 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1017,8 +1048,8 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 691 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 691 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 697 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 697 passed，`/docs` 正常 |
 
 ---
 

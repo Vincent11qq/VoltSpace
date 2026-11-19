@@ -402,6 +402,77 @@ def run_flet(python: Path, env: dict[str, str]) -> int:
         return 1
 
 
+def lan_address() -> str:
+    """This machine's address on the local network, for phones on the same Wi-Fi.
+
+    Opening a UDP socket to a public IP sends no packets; it just makes the OS pick the
+    interface that would be used, whose address is the one a phone can reach.
+    """
+
+    import socket
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("8.8.8.8", 80))
+        return sock.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return HOST
+    finally:
+        sock.close()
+
+
+def run_flet_web(python: Path, env: dict[str, str], port: int) -> int:
+    """Serve the Flet UI as a web page so a phone can open it in a browser.
+
+    The Python side keeps running here - the phone only renders - so the app can still talk
+    to the backend on the loopback address. Only this one port needs to be reachable.
+    """
+
+    flet_app = BACKEND_ROOT / "desktop" / "app.py"
+    probe = subprocess.run(
+        [
+            str(python),
+            "-c",
+            "import importlib.util as u\n"
+            "missing = [n for n in ('flet', 'flet_web') if u.find_spec(n) is None]\n"
+            "print(','.join(missing))\n"
+            "raise SystemExit(1 if missing else 0)\n",
+        ],
+        cwd=str(BACKEND_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode != 0:
+        print("\nWeb mode needs the flet-web package (a browser tab instead of a window).")
+        if (probe.stdout or "").strip():
+            print(f"Missing: {(probe.stdout or '').strip()}")
+        print(f"    {python} -m pip install flet-web==1.0.5")
+        print("\nThe web UI at the URL above still works, and needs none of this.")
+        return 0
+
+    address = lan_address()
+    print()
+    banner("Flet UI as a web page (open it on your phone)")
+    print(f"  this machine : http://{HOST}:{port}/")
+    if address != HOST:
+        print(f"  same Wi-Fi   : http://{address}:{port}/    <- 手機用這個")
+    print("\n  Phone and computer must be on the same network.")
+    print("  The Python side runs here, so the backend URL does not change.")
+    print("  Press Ctrl+C to stop.\n")
+
+    child_env = {
+        **flet_cache_env(env),
+        "VOLTSPACE_FLET_WEB": "1",
+        "VOLTSPACE_FLET_HOST": PUBLIC_HOST,
+        "VOLTSPACE_FLET_PORT": str(port),
+    }
+    return subprocess.call([str(python), str(flet_app)], cwd=str(BACKEND_ROOT), env=child_env)
+
+
 def setup_environment() -> int:
     """Create ``.venv`` and install the requirements — the portable, one-time setup.
 
@@ -573,6 +644,15 @@ def main() -> int:
     )
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--flet", action="store_true", help="also launch the Flet desktop UI")
+    parser.add_argument(
+        "--flet-web",
+        nargs="?",
+        type=int,
+        const=8550,
+        default=None,
+        metavar="PORT",
+        help="把 Flet 介面開成網頁（手機/平板可用瀏覽器開），預設埠 8550",
+    )
     parser.add_argument("--check", action="store_true", help="verify the environment and exit")
     parser.add_argument(
         "--setup",
@@ -653,6 +733,9 @@ def main() -> int:
 
         if args.flet:
             return run_flet(python, env)
+
+        if args.flet_web:
+            return run_flet_web(python, env, args.flet_web)
 
         return server.wait()
     except KeyboardInterrupt:

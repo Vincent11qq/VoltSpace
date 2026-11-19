@@ -953,8 +953,36 @@ def main(page: ft.Page):
     app.go("home")
 
 
-if __name__ == "__main__":
+def run() -> None:
+    """Open the UI as a window, or serve it as a web page for phones and other devices.
+
+    Flet web mode keeps the Python side on this machine: the phone only renders. That means
+    the app can still call the backend at 127.0.0.1:8000 - nothing has to be exposed except
+    the Flet port itself.
+
+    Environment:
+        VOLTSPACE_FLET_WEB=1        serve as a web page instead of opening a window
+        VOLTSPACE_FLET_HOST         bind address (default 0.0.0.0, so a phone can reach it)
+        VOLTSPACE_FLET_PORT         port (default 8550)
+    """
+
+    if os.environ.get("VOLTSPACE_FLET_WEB", "").strip() not in {"", "0"}:
+        host = os.environ.get("VOLTSPACE_FLET_HOST", "0.0.0.0")
+        port = int(os.environ.get("VOLTSPACE_FLET_PORT", "8550"))
+        ft.run(
+            main,
+            assets_dir="assets",
+            view=ft.AppView.WEB_BROWSER,
+            host=host,
+            port=port,
+        )
+        return
+
     if hasattr(ft, "run"):
         ft.run(main, assets_dir="assets")
-    else:
+    else:  # Flet 0.x fallback
         ft.app(target=main, assets_dir="assets")
+
+
+if __name__ == "__main__":
+    run()

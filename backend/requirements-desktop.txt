@@ -22,6 +22,6 @@ flet==1.0.5
 flet-desktop==1.0.5
 rich>=13.0.0
 
-# Flet's *web* mode (a browser tab instead of a window) additionally needs this package.
-# It is a ~27 MB wheel because it bundles the Flutter web assets.
-# flet-web==1.0.5
+# Flet's *web* mode - the same UI in a browser tab, which is how you use it on a phone
+# (un_app.bat --flet-web). It is a ~27 MB wheel because it bundles the Flutter web assets.
+flet-web==1.0.5
