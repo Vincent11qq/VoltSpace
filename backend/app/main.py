@@ -24,6 +24,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
+from app.product_recommendations import get_product_recommendations
 
 from fastapi import Body, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
