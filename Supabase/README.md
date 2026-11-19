@@ -17,7 +17,7 @@
 | `supabase_fixed.py` | 我修好的可執行版本 |
 
 後端 `app/store_supabase.py` 讀寫的就是這張表，欄位已用
-`tools/check_schema_match.py` 驗證與 `backend/db/schema.sql` 一致。
+`tools/check_schema_match.py` 驗證與 `server/db/schema.sql` 一致。
 
 ## 這批修好了什麼
 
@@ -28,7 +28,7 @@
 | 欄位名 | `Appliance` / `Power` / `Minutes` | `name` / `power_watts` / `hours_per_day`（與 `ApplianceIn` 一致）|
 | 單位 | 分鐘 | 小時 |
 | 缺欄位 | 沒有 `days_per_month`、`voltage`、`power_factor` | 都有 |
-| 電價表 | 沒有 | 選用的 `backend/db/optional-tariff-plans.sql` |
+| 電價表 | 沒有 | 選用的 `server/db/optional-tariff-plans.sql` |
 | 金鑰位置 | 寫死在程式碼裡 | 環境變數（`.env` 或平台的設定）|
 
 ## `supabase.py` 的錯誤（已修於 `supabase_fixed.py`）
@@ -43,5 +43,5 @@
 
 ## 想真的用 Supabase
 
-見 [`../backend/docs/supabase.md`](../backend/docs/supabase.md)。
-跑 `../backend/db/schema.sql` 即可（不是用這裡的檔案）。
+見 [`../server/docs/supabase.md`](../server/docs/supabase.md)。
+跑 `../server/db/schema.sql` 即可（不是用這裡的檔案）。

@@ -57,4 +57,5 @@ flet-windows.zip*
 desktop_prefs.json
 
 # Flet 與 pytest 在專案裡留下的隨機命名暫存資料夾
-backend/tmp*/
+server/tmp*/
+frontend/tmp*/

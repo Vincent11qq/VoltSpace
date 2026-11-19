@@ -9,16 +9,16 @@
 #   ./run_app.sh --flet-web   serve the Flet UI as a web page (phone/tablet)
 #   ./run_app.sh --check      verify the environment only
 #
-# The backend lives in backend/ ; this file only launches it.
+# The server lives in server/ ; this file only launches it.
 # ===========================================================================
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND="$HERE/backend"
+BACKEND="$HERE/server"
 
 if [ ! -f "$BACKEND/start.py" ]; then
-  echo "[X] backend/start.py was not found next to this launcher."
-  echo "    Run run_app.sh from the folder that contains backend/ ."
+  echo "[X] server/start.py was not found next to this launcher."
+  echo "    Run run_app.sh from the folder that contains server/ ."
   exit 1
 fi
 

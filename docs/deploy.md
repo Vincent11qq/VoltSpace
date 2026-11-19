@@ -86,7 +86,7 @@ cloudflared tunnel --url http://127.0.0.1:8000
 | 欄位 | 值 |
 | --- | --- |
 | Environment | `Python` |
-| Root Directory | `backend` |
+| Root Directory | `server` |
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `python start.py --no-browser` |
 | Health Check Path | `/health` |
@@ -98,14 +98,14 @@ cloudflared tunnel --url http://127.0.0.1:8000
 
 ### B-3 讓 Flet 版也有自己的網址（選用）
 
-上面部署的是 `backend/web/` 的網頁版。如果你想讓 **Flet 那套介面**（Member A 的新設計）
+上面部署的是 `server/web/` 的網頁版。如果你想讓 **Flet 那套介面**（Member A 的新設計）
 也有一個可以直接打開的網址（例如手機傳連結給助教），再加**第二個服務**：
 
 | 欄位 | 值 |
 | --- | --- |
 | Environment | `Python` |
-| Root Directory | `backend` |
-| Build Command | `pip install -r requirements-flet-web.txt` |
+| Root Directory | `server` |
+| Build Command | `pip install -r server/requirements-flet-web.txt`（或把 Root Directory 設成 `frontend`，用 `../server/requirements-flet-web.txt`） |
 | Start Command | `python desktop/app.py` |
 | Health Check Path | `/` |
 | `VOLTSPACE_FLET_WEB` | `1` |
@@ -187,7 +187,7 @@ secret 在 Space 的 **Settings → Variables and secrets** 填。
 
 **Q：`500 storage_error`**
 看服務 log。常見是 key 用了 `anon` 而不是 `service_role`、或表還沒建
-（跑 `backend/db/schema.sql`）。也可以在本地先跑 `python tools/supabase_doctor.py` 檢查。
+（跑 `server/db/schema.sql`）。也可以在本地先跑 `python tools/supabase_doctor.py` 檢查。
 
 **Q：Render 第一次打開很慢（30 秒以上）**
 免費方案休眠造成的，正常。簡報前先開一次喚醒它。

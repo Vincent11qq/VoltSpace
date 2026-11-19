@@ -3,15 +3,15 @@ REM ===========================================================================
 REM VoltSpace - one-click launcher (Windows)          <-- repo root entry point
 REM
 REM Double-click this file. It finds a Python on THIS machine, starts the
-REM backend (which also serves the web UI) and opens your browser at the app.
+REM server (which also serves the web UI) and opens your browser at the app.
 REM
-REM The backend lives in backend\ ; this file only launches it, so the repo
+REM The server lives in server\ ; this file only launches it, so the repo
 REM root stays readable: one launcher here, everything else inside its folder.
 REM
 REM No path in this file is specific to any computer, so a downloaded copy
 REM works as-is as long as Python 3.10+ is installed.
 REM
-REM Options are passed through to backend\start.py:
+REM Options are passed through to server\start.py:
 REM     run_app.bat --setup         create .venv and install requirements, then exit
 REM     run_app.bat --port 8080
 REM     run_app.bat --flet          also try the Flet desktop UI
@@ -22,13 +22,13 @@ setlocal EnableDelayedExpansion
 
 set "HERE=%~dp0"
 set "HERE=%HERE:~0,-1%"
-set "BACKEND=%HERE%\backend"
+set "BACKEND=%HERE%\server"
 set "PYTHONIOENCODING=utf-8"
 
 if not exist "%BACKEND%\start.py" (
   echo.
-  echo [X] backend\start.py was not found next to this launcher.
-  echo     Run run_app.bat from the folder that contains backend\ .
+  echo [X] server\start.py was not found next to this launcher.
+  echo     Run run_app.bat from the folder that contains server\ .
   echo.
   pause
   exit /b 1
@@ -76,7 +76,7 @@ if not defined PY (
   echo     2. Then double-click this file again.
   echo.
   echo     If Python is installed but still not found, open a terminal and run:
-  echo         py backend\start.py --setup
+  echo         py server\start.py --setup
   echo.
   pause
   exit /b 1
@@ -93,9 +93,9 @@ if not "%RC%"=="0" (
   echo [X] The app exited with code %RC%.
   echo.
   echo     If packages are missing, install them once:
-  echo         "%PY%" backend\start.py --setup
+  echo         "%PY%" server\start.py --setup
   echo     Then check the setup:
-  echo         "%PY%" backend\start.py --check
+  echo         "%PY%" server\start.py --check
   echo.
   pause
 )

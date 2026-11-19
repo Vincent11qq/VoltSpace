@@ -1,19 +1,19 @@
 # Docker 建置時不要送進去的東西（映像檔要小、也不要夾帶金鑰或本機資料）
 
 # 虛擬環境與離線安裝產物：容器內會重新安裝，複製進去只會讓映像檔變大
-backend/.venv/
-backend/.venv*/
-backend/.pylibs/
-backend/.pylibs-*/
-backend/.wheels/
-backend/.wheels-*/
+server/.venv/
+server/.venv*/
+server/.pylibs/
+server/.pylibs-*/
+server/.wheels/
+server/.wheels-*/
 
 # 本機執行資料（家電清單）與暫存
-backend/.data/
-backend/.test-data/
-backend/*.db
-backend/*.db-wal
-backend/*.db-shm
+server/.data/
+server/.test-data/
+server/*.db
+server/*.db-wal
+server/*.db-shm
 
 # 快取
 **/__pycache__/

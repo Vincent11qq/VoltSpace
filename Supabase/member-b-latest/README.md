@@ -25,8 +25,8 @@ name, category, power_watts, hours_per_day,
 days_per_month, quantity, voltage, power_factor, household_id
 ```
 
-**與 `backend/app/schemas.py` 的 `ApplianceIn` 完全一致**，
-所以 `backend/app/store_supabase.py` 偵測時會判定為 `current` 版面，直接可用。
+**與 `server/app/schemas.py` 的 `ApplianceIn` 完全一致**，
+所以 `server/app/store_supabase.py` 偵測時會判定為 `current` 版面，直接可用。
 
 這是目前 Supabase 專案裡**實際生效**的 schema（已驗證：線上表的欄位與此檔一致）。
 
@@ -62,11 +62,11 @@ USING (household_id = auth.uid());
 * 後端用 `service_role` key → **繞過 RLS，不受影響**（目前就是這樣跑的）
 * 若之後要用 anon key + 登入 → `VOLTSPACE_HOUSEHOLD_ID` 必須等於該使用者的 uid
 
-## 跟 `backend/db/schema.sql` 的關係
+## 跟 `server/db/schema.sql` 的關係
 
 **兩者目前不一致**，不要混用：
 
-| 項目 | `backend/db/schema.sql`（Member C 版）| 本資料夾（Member B 版，= 線上實際）|
+| 項目 | `server/db/schema.sql`（Member C 版）| 本資料夾（Member B 版，= 線上實際）|
 | --- | --- | --- |
 | `appliances.user_id` | 有（`not null default auth.uid()`）| **沒有** |
 | `appliances.household_id` | 用 `alter table` 加上 | 建表時就有 |
@@ -74,7 +74,7 @@ USING (household_id = auth.uid());
 | `tariff_plans` 表 | 有（含電價 seed）| **沒有** |
 | RLS 依據 | `user_id = auth.uid()` | `household_id = auth.uid()` |
 
-⚠️ **在目前這個線上專案上直接執行 `backend/db/schema.sql` 會失敗**，
+⚠️ **在目前這個線上專案上直接執行 `server/db/schema.sql` 會失敗**，
 因為它會嘗試在 `appliances` 上建立 `user_id` 索引與政策，但該欄位不存在：
 
 ```

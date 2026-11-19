@@ -6,21 +6,21 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 
 | 成員 | 負責 | 放在哪裡 |
 | --- | --- | --- |
-| **Member C（喬元震）** | 計算核心：用電量、電費、負載、建議、模擬 | `backend/app/` |
-| **Member A（郭潼）** | 介面：原 Flet 原型 → 修正後改接後端 | `backend/web/`、`backend/desktop/` |
-| **Member B（呂婉菲）** | 資料庫：Supabase schema 與連線 | `backend/db/schema.sql`、`Supabase/member-b-latest/` |
+| **Member C（喬元震）** | 計算核心：用電量、電費、負載、建議、模擬 | `server/app/` |
+| **Member A（郭潼）** | 介面：原 Flet 原型 → 修正後改接後端 | `server/web/`、`server/desktop/` |
+| **Member B（呂婉菲）** | 資料庫：Supabase schema 與連線 | `server/db/schema.sql`、`Supabase/member-b-latest/` |
 
 **目前狀態**（數字都是實測，可用文末指令重現）
 
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **716 passed**（約 7 秒）|
+| 測試 | **722 passed**（約 7 秒）|
 | API | 5 個計算端點 + 家電儲存 + 儀表板 + 產品建議，共 18 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
 | 啟動時間 | 約 1.3 秒 |
-| Python 比例 | **91%**（含測試與工具）、**80%**（只算產品程式碼）|
+| Python 比例 | **90%**（含測試與工具）、**79%**（只算產品程式碼）|
 
 ## 目錄
 
@@ -54,7 +54,7 @@ run_app.bat --setup            # Windows：建立 .venv 並安裝套件（約 1 
 
 > 版面說明：**最上層只放「怎麼跑」與「怎麼部署」** —— 啟動檔（`run_app.bat` / `run_app.sh`）、
 > 部署設定（`Dockerfile`、`render.yaml`、`.env.example`）、說明文件與 `Supabase/` 的 SQL。
-> **程式本體全部在 `backend/`**；啟動檔只負責挑 Python 並轉呼叫 `backend/start.py`。
+> **程式本體全部在 `server/`**；啟動檔只負責挑 Python 並轉呼叫 `server/start.py`。
 
 ### 之後每次（一樣在專案最上層）
 
@@ -107,7 +107,7 @@ run_app.bat --flet-web
   `cloudflared tunnel --url http://127.0.0.1:8550`（做法同 [`docs/deploy.md`](docs/deploy.md)）。
 
 > 單純要「在手機上看得到」其實還有更省事的一條：直接開 [已部署的網站](https://voltspace-7y2w.onrender.com/)，
-> 那是 `backend/web/` 的網頁版（不裝任何東西、手機原生可用）。`--flet-web` 是為了展示
+> 那是 `server/web/` 的網頁版（不裝任何東西、手機原生可用）。`--flet-web` 是為了展示
 > Member A 的 Flet 設計。
 
 | 網址 | 內容 |
@@ -120,7 +120,7 @@ run_app.bat --flet-web
 所有文字都由後端提供兩種語言 —— 家電名稱、迴路名稱、電價方案、節電建議、
 警告與免責聲明都有 `_zh` / `_en` 兩份，前端只負責挑選。缺英文時會退回中文，**不會空白**。
 
-**家電存在哪裡**：預設寫進本機的 SQLite（`backend/.data/voltspace.db`），
+**家電存在哪裡**：預設寫進本機的 SQLite（`server/.data/voltspace.db`），
 所以**不需要任何雲端帳號就能完整使用**。想改用 Supabase 只要設環境變數，程式不用改：
 
 | `VOLTSPACE_STORAGE` | 行為 |
@@ -131,30 +131,30 @@ run_app.bat --flet-web
 
 需要 `VOLTSPACE_SUPABASE_URL` 與 `VOLTSPACE_SUPABASE_SERVICE_KEY`，
 `/health` 的 `storage` 欄位會顯示目前實際用的是哪一種。做法見
-[`backend/docs/supabase.md`](backend/docs/supabase.md)。
+[`server/docs/supabase.md`](server/docs/supabase.md)。
 
 > 詳細的整合說明、三個成員的原始成果分別被怎麼處理，見
-> [`backend/docs/integration.md`](backend/docs/integration.md)。
+> [`server/docs/integration.md`](server/docs/integration.md)。
 >
-> 想知道 backend 目前完成了哪些部分（含功能對照、測試、限制），見
-> [`docs/backend-status.md`](docs/backend-status.md)。
+> 想知道伺服器端（server/）目前完成了哪些部分（含功能對照、測試、限制），見
+> [`docs/server-status.md`](docs/server-status.md)。
 >
 > **想部署成網站讓別人直接用**（不用下載）：見 [docs/deploy.md](docs/deploy.md) ——
 > 免費的 Cloudflare Tunnel、Render、Docker 三種方式，已附設定檔。
 >
-> 其他文件：[Supabase 整合](backend/docs/supabase.md)（選用）、
-> [程式碼審查紀錄](backend/docs/code-review-audit.md)、
-> [API 規格](backend/docs/openapi.json)。
+> 其他文件：[Supabase 整合](server/docs/supabase.md)（選用）、
+> [程式碼審查紀錄](server/docs/code-review-audit.md)、
+> [API 規格](server/docs/openapi.json)。
 
 ### 換到另一台電腦時
 
 整個專案資料夾複製過去即可，**不需要修改任何路徑**：
 
-- 程式裡沒有 `C:\Users\...` 這類絕對路徑（`backend/tests/test_portability.py` 會檢查）。
+- 程式裡沒有 `C:\Users\...` 這類絕對路徑（`server/tests/test_portability.py` 會檢查）。
 - `.venv/` 不必一起複製；到新電腦跑一次 `run_app.bat --setup`（macOS／Linux 用
   `./run_app.sh --setup`）重建即可
   （`.venv` 綁定作業系統與 Python 版本，複製過去通常不能用）。
-- 家電資料存在 `backend/.data/voltspace.db`；想保留就一起複製，不想保留刪掉即可。
+- 家電資料存在 `server/.data/voltspace.db`；想保留就一起複製，不想保留刪掉即可。
 
 **如果沒有網路**，用離線安裝（見 [6.2](#6-安裝疑難排解)），完全不需要 pip。
 
@@ -178,18 +178,20 @@ run_app.bat --flet-web
 ```
 VoltSpace/
 ├── README.md                    本文件：怎麼跑、怎麼整合
-├── run_app.bat / run_app.sh     一鍵啟動（挑 Python、起後端、開瀏覽器）
-├── Dockerfile                   選用：容器化部署
+├── run_app.bat / run_app.sh     一鍵啟動（挑 Python、起伺服器、開瀏覽器）
+├── Dockerfile                   選用：容器化部署（server/ 與 frontend/ 都進映像檔）
 ├── render.yaml                  選用：Render Blueprint（API + Flet 兩個服務）
 ├── .env.example                 選用：Supabase 設定的範本
-├── backend/                     ← 可執行的系統（主體）
+├── server/                      ← 伺服器：API、計算、儲存（Member C）
 │   ├── app/
-│   │   ├── main.py              FastAPI 應用：計算 API + 家電儲存 + 儀表板端點
+│   │   ├── main.py              FastAPI 應用：計算 API + 家電儲存 + 儀表板
 │   │   ├── schemas.py           Pydantic 請求／回應模型（含 OpenAPI 範例）
 │   │   ├── store.py             本機 SQLite 家電儲存（不需要雲端就能用）
 │   │   ├── store_supabase.py    Supabase（PostgREST）儲存層，欄位與 store.py 一致
 │   │   ├── storage.py           依環境變數挑選儲存後端（auto / supabase / local）
 │   │   ├── data_check.py        啟動時的資料檔完整性檢查（壞資料直接拒絕啟動）
+│   │   ├── products.py          從 Supabase 讀產品型錄（節能產品建議用）
+│   │   ├── product_recommendations.py  依用電量挑選更省電的產品
 │   │   ├── calculators/         ← 純計算，不 import FastAPI 也不碰資料庫
 │   │   │   ├── consumption.py       每月用電量 + 輸入驗證
 │   │   │   ├── electricity_bill.py  電費（級距／時間電價／單一費率）
@@ -200,16 +202,11 @@ VoltSpace/
 │   │   └── data/
 │   │       ├── tariffs.json         電價方案（台電住宅累進等 3 種）
 │   │       └── appliances.json      12 種家電：功率、電壓、10 條規則、替代機種
-│   ├── web/                     ← 網頁介面（HTML/CSS/JS，由後端提供，可中英切換）
-│   │   ├── index.html
-│   │   ├── app.css              沿用原型的新擬物風格
-│   │   └── app.js               只呼叫 API，不含公式與費率
-│   ├── desktop/app.py           Flet 桌面版（Member A 的新介面，數字全部來自 API）
 │   ├── db/
 │   │   ├── schema.sql           Supabase schema（2 張表 + RLS，已對齊線上專案）
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
-│   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
-│   ├── tests/                   716 個測試（逐檔說明見第 5 節）
+│   ├── start.py                 啟動器（挑 Python、起 uvicorn、開瀏覽器）
+│   ├── tests/                   722 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -218,9 +215,18 @@ VoltSpace/
 │   │   └── examples/*.json      13 個真實請求／回應範例（由程式產生）
 │   ├── code-review-audit.md     對抗式程式碼審查紀錄與修正對照表
 │   ├── pytest.ini
-│   ├── requirements.txt         執行後端所需
-│   └── requirements-desktop.txt 選用：Flet 桌面版
-├── docs/backend-status.md       後端完成度、測試與限制的總整理
+│   ├── requirements.txt         執行伺服器所需
+│   ├── requirements-desktop.txt 選用：Flet 桌面版（開視窗）
+│   └── requirements-flet-web.txt 選用：Flet 開成網頁（部署用）
+├── frontend/                    ← 介面（Member A）
+│   ├── web/                     網頁版（HTML/CSS/JS，由 server 提供，可中英切換）
+│   │   ├── index.html
+│   │   ├── app.css              沿用原型的新擬物風格
+│   │   └── app.js               只呼叫 API，不含公式與費率
+│   └── desktop/app.py           Flet 桌面版（數字全部來自 API）
+├── docs/
+│   ├── server-status.md         伺服器完成度、測試與限制的總整理
+│   └── deploy.md                部署成網站（Render / Docker / Cloudflare Tunnel）
 └── Supabase/
     ├── member-b-latest/         Member B 最新交付的 SQL（線上專案即用這份）
     └── README.md                兩批 SQL 的差異與修正說明
@@ -241,7 +247,7 @@ VoltSpace/
 >
 > 1. **根本沒啟動伺服器** —— 瀏覽器會顯示「無法連上這個網站 / ERR_CONNECTION_REFUSED」。
 > 2. **終端機有錯誤但沒注意** —— 通常是 `ModuleNotFoundError: No module named 'fastapi'`
->    或 `No module named 'app'`，代表套件沒裝好或**不在 `backend/` 目錄下執行**。
+>    或 `No module named 'app'`，代表套件沒裝好或**不在 `server/` 目錄下執行**。
 > 3. **連接埠不同** —— 如果啟動時用了 `--port 8080`，網址就必須是 `...:8080/docs`。
 >
 > **最省事的做法**：直接雙擊 `run_app.bat`（見 2.2 的說明）。
@@ -257,7 +263,7 @@ VoltSpace/
 ### 2.1 安裝
 
 ```bash
-cd backend
+cd server
 python -m venv .venv
 .venv\Scripts\activate            # Windows
 # source .venv/bin/activate       # macOS / Linux
@@ -310,14 +316,14 @@ pip install -r requirements.txt
 ### 2.2 啟動 API
 
 ```bash
-cd backend
+cd server
 uvicorn app.main:app --reload --port 8000
 ```
 
 日常使用其實直接 `run_app.bat` 就好（它會挑 Python、設定環境變數、開瀏覽器）；
 `--reload` 只在改程式碼時有用，正式示範時不要用（每次存檔都會重啟）。
 
-**必須在 `backend/` 目錄下執行**（`app.main` 是相對於這個目錄的套件路徑），
+**必須在 `server/` 目錄下執行**（`app.main` 是相對於這個目錄的套件路徑），
 而且這個終端機視窗要一直開著。看到下面這行才算成功：
 
 ```
@@ -337,7 +343,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 716 個測試
+python -m pytest                     # 全部 722 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -363,7 +369,7 @@ python tools/export_examples.py
 
 確認文件裡的數字與程式輸出一致（文件很容易過時，這個會抓出來）。
 它會跑 `pytest --collect-only` 與 `python_share.py`，所以**測試數和 Python 比例**
-也是它驗的 —— 三個文件（README、integration、backend-status）都會檢查：
+也是它驗的 —— 三個文件（README、integration、server-status）都會檢查：
 
 ```bash
 python tools/check_docs_numbers.py           # 完整（約 9 秒）
@@ -456,7 +462,7 @@ curl -X POST http://127.0.0.1:8000/calculate/consumption \
       }'
 ```
 
-回應（節錄，完整內容見 `backend/docs/examples/consumption_household.json`）：
+回應（節錄，完整內容見 `server/docs/examples/consumption_household.json`）：
 
 ```json
 {
@@ -643,7 +649,7 @@ curl -X POST http://127.0.0.1:8000/recommendations \
       ],"month":8,"top_n":3}'
 ```
 
-回應（節錄，完整內容見 `backend/docs/examples/recommendations_student_room.json`）：
+回應（節錄，完整內容見 `server/docs/examples/recommendations_student_room.json`）：
 
 ```json
 {
@@ -742,7 +748,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
       }'
 ```
 
-回應（節錄，完整內容見 `backend/docs/examples/simulate_reduce_ac_hours.json`）：
+回應（節錄，完整內容見 `server/docs/examples/simulate_reduce_ac_hours.json`）：
 
 ```json
 {
@@ -788,7 +794,7 @@ curl -X POST http://127.0.0.1:8000/simulate \
 }
 ```
 
-`backend/docs/examples/simulate_swap_efficient_ac.json` 是更換機種的版本
+`server/docs/examples/simulate_swap_efficient_ac.json` 是更換機種的版本
 （功率 900W → 700W、時數 9 → 7 小時）：381.6 → 285.6 度，每月省 299.7 元，
 年度省 3,596.4 元。
 
@@ -916,11 +922,11 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ## 5. 測試
 
-> 以下指令都在 `backend/` 內執行。
+> 以下指令都在 `server/` 內執行。
 
 ```bash
 python -m pytest -q
-# 716 passed
+# 722 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -963,7 +969,7 @@ python -m pytest -q
 
 ### 5.1 程式碼審查紀錄
 
-`backend/docs/code-review-audit.md` 是一次對抗式自我審查的完整紀錄：在 371 個測試全過的版本上，
+`server/docs/code-review-audit.md` 是一次對抗式自我審查的完整紀錄：在 371 個測試全過的版本上，
 仍找出 5 個真實缺陷（三相電流被忽略、`/simulate` 忽略 `billing_months`、
 改名替換把一列拆成兩列、同名家電的建議被去重吃掉、含別名的中文名稱比對不到）
 與 2 個文件過時問題。這些全部已修正，且每個都補上迴歸測試；該文件保留
@@ -979,7 +985,7 @@ python -m pytest -q
   「資料檔有錯要等第一個請求才炸」
 
 完整的 before／after 與逐項對照（11 項）見
-[`docs/backend-status.md` 第 9 節](docs/backend-status.md#9-效能)。重現方式：
+[`docs/server-status.md` 第 9 節](docs/server-status.md#9-效能)。重現方式：
 
 ```bash
 python tools/benchmark.py 40      # 各函式與端點耗時
@@ -1046,7 +1052,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 716 passed
+python -m pytest                     # 應該 722 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1055,8 +1061,8 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 716 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 716 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 722 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 722 passed，`/docs` 正常 |
 
 ---
 

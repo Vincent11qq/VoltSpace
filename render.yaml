@@ -17,7 +17,7 @@ services:
     name: voltspace
     runtime: python
     plan: free
-    rootDir: backend
+    rootDir: server
     buildCommand: pip install -r requirements.txt
     startCommand: python start.py --no-browser
     healthCheckPath: /health
@@ -44,8 +44,8 @@ services:
     name: voltspace-flet
     runtime: python
     plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements-flet-web.txt
+    rootDir: frontend
+    buildCommand: pip install -r ../server/requirements-flet-web.txt
     startCommand: python desktop/app.py
     healthCheckPath: /
     autoDeploy: true
