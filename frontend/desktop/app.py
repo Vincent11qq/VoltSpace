@@ -474,6 +474,25 @@ def viewport(page, fallback_w=None, fallback_h=None):
     return int(min(width, W)), int(min(height, H))
 
 
+def give_ink(node):
+    """Turn on ripple feedback for every Container that can be tapped.
+
+    Cards, preset chips, function cells and the bottom navigation were plain Containers
+    with on_click, so they gave no visual feedback. One pass over the finished tree keeps
+    every helper unchanged and guarantees none is missed.
+    """
+
+    if isinstance(node, ft.Container) and node.on_click is not None:
+        node.ink = True
+    for attribute in ("controls", "content"):
+        child = getattr(node, attribute, None)
+        if isinstance(child, list):
+            for item in child:
+                give_ink(item)
+        elif child is not None and not isinstance(child, (str, int, float)):
+            give_ink(child)
+
+
 def radius(tl=0, tr=0, bl=0, br=0):
     return ft.BorderRadius(top_left=tl, top_right=tr, bottom_left=bl, bottom_right=br)
 
@@ -512,6 +531,7 @@ def button(label, on_click, bg=YELLOW, fg=NAVY, height=50):
     return ft.Container(
         content=txt(label, 20, fg, True), alignment=center(),
         height=height, bgcolor=bg, border_radius=height / 2, on_click=on_click,
+        ink=True,   # ripple feedback on every button
     )
 
 
@@ -1025,11 +1045,13 @@ class App:
         # Screens lay themselves out for this size (see home_screen's function grid).
         self.size = viewport(self.page)
         header, body = SCREENS[name](self, params)
-        return ft.Container(
+        frame = ft.Container(
             content=ft.Column([header, body, bottom_nav(self)], spacing=0),
             width=self.size[0], height=self.size[1], bgcolor=DARK,
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
+        give_ink(frame)
+        return frame
 
     def go(self, name, **params):
         if self.current is not None:
