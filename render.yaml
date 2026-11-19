@@ -39,14 +39,17 @@ services:
   # --- 2. 同一份 App 的 Flet 介面，開成網頁 ----------------------------------
   # Flet 的 web 模式就是一個普通的 Python 網頁服務：Python 跑在 Render，瀏覽器只負責
   # 畫面。它自己不含計算，所以要靠 VOLTSPACE_API 指到上面那個服務才有資料。
+  #
+  # 刻意「不」設 rootDir：留在 repo 根目錄，所有路徑都寫成 repo 內的相對路徑
+  # （server/…、frontend/…）。這樣指令裡不會出現 ``..``，Render 不需要支援跨出
+  # rootDir，藍圖在任何方案下都能照字面執行。
   # 下面的網址若你的服務名稱不同，請一併改成 https://<你的服務>.onrender.com。
   - type: web
     name: voltspace-flet
     runtime: python
     plan: free
-    rootDir: frontend
-    buildCommand: pip install -r ../server/requirements-flet-web.txt
-    startCommand: python desktop/app.py
+    buildCommand: pip install -r server/requirements-flet-web.txt
+    startCommand: python frontend/desktop/app.py
     healthCheckPath: /
     autoDeploy: true
     envVars:
