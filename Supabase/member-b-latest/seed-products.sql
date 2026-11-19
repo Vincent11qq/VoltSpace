@@ -1,58 +1,38 @@
--- VoltSpace — 示範用產品資料（Member B 的 products 表）
+-- VoltSpace - products 表的種子資料（真實產品，逐筆查證）
 --
--- 為什麼需要這一份：`/product-recommendations` 會依家電分類去 products 表找「更省電」的
--- 替代品。表若沒有資料，端點會誠實地回 `{"recommendations": [], "total": 0}`，
--- 前端就會顯示「沒有可推薦的產品」——不是壞掉，只是沒有東西可推薦。
+-- 原則：只有「在節能標章資料庫實際查到消耗電力(W)」的型號才寫進來。
+--       價格沒查到就留 null（前端不會顯示價格那一行），不編造。
+--       每筆在 description 附來源與查證日期。
 --
--- 用法：Supabase → SQL Editor → 貼上整份執行（可重複執行，已用 on conflict 防重複）。
+-- 分類要對得上 server/app/data/appliances.json：
+--   cooling / heating / laundry / electronics / lighting / kitchen
 --
--- 分類要跟 server/app/data/appliances.json 對得上：
---   cooling（冷氣、冰箱）、heating（電暖器）、laundry（洗衣機）、
---   electronics（電腦、電視）、lighting（照明）、kitchen（電鍋、微波爐）
---
--- 瓦數刻意比常見機種低（例如冷氣 900W → 700W），這樣才會被判定為「更省電」；
--- 價格與型號是示範值，不是實際報價。
+-- 用法：Supabase -> SQL Editor -> 貼上執行（可重複執行）
 
 insert into public.products
     (name, brand, category, model, power_watts, voltage, energy_rating,
      price, currency, product_url, description, is_active)
 values
-    ('一級能效變頻冷氣（示範）', 'Demo', 'cooling', 'AC-700',
-     700, 220, '1', 23900, 'TWD', null,
-     '對比常見的 900 W 定頻機種，瓦數較低。示範資料。', true),
-
-    ('雙門變頻冰箱（示範）', 'Demo', 'cooling', 'RF-90',
-     90, 110, '1', 18900, 'TWD', null,
-     '對比常見的 130 W 機種。示範資料。', true),
-
-    ('DC 直流電風扇（示範）', 'Demo', 'cooling', 'FAN-25',
-     25, 110, null, 1890, 'TWD', null,
-     '對比常見的 45 W 交流風扇。示範資料。', true),
-
-    ('LED 燈泡 10 W（示範）', 'Demo', 'lighting', 'LED-10',
-     10, 110, null, 149, 'TWD', null,
-     '對比 60 W 白熾燈泡。示範資料。', true),
-
-    ('一級能效變頻洗衣機（示範）', 'Demo', 'laundry', 'WM-350',
-     350, 110, '1', 15900, 'TWD', null,
-     '對比常見的 500 W 機種。示範資料。', true),
-
-    ('變頻微波爐（示範）', 'Demo', 'kitchen', 'MW-800',
-     800, 110, null, 3990, 'TWD', null,
-     '對比常見的 1000 W 機種。示範資料。', true),
-
-    ('節能電熱水瓶（示範）', 'Demo', 'kitchen', 'KT-600',
-     600, 110, null, 2490, 'TWD', null,
-     '對比常見的 800 W 機種。示範資料。', true),
-
-    ('變頻電暖器（示範）', 'Demo', 'heating', 'HT-800',
-     800, 110, null, 4290, 'TWD', null,
-     '對比常見的 1200 W 機種。示範資料。', true)
+    -- 已查證：節能標章全球資訊網，證書 1100735續2（2025/12/01-2027/11/30）
+    ('14 吋 DC 桌上電扇', '中央牌', 'cooling', 'KDF-121SR',
+     28, 110, null, null, 'TWD',
+     'https://ea03.moeaea.gov.tw/e0410/01/purchasing/product/fprint.aspx?itemp0=57183',
+     '節能標章標示消耗電力 28 W（查證日 2026-11-19）。可取代約 45-60 W 的傳統交流風扇。',
+     true)
 on conflict do nothing;
 
--- 檢查：應該要有 8 筆
-select category, count(*) as products
+-- 待查證清單（查到才加進上面的 insert）：
+--   冷氣     一級能效變頻分離式 2.8 kW 級（對比常見 900 W 定頻）
+--   冰箱     一級能效變頻 300-500 L（對比常見 130 W）
+--   洗衣機   一級能效變頻（對比常見 500 W）
+--   微波爐   變頻機種（對比常見 1000 W）
+--   電熱水瓶 節能機種（對比常見 800 W）
+--   電暖器   變頻機種（對比常見 1200 W）
+--
+-- 每筆需要：型號、廠牌、消耗電力(W)、電壓、分類、價格（查不到就 null）
+
+select model, brand, category, power_watts,
+       case when price is null then '價格待查' else price::text end as price
 from public.products
 where is_active
-group by category
-order by category;
+order by category, model;
