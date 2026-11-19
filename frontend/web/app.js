@@ -95,6 +95,11 @@ const I18N = {
     "recs.title": "節電建議",
     "recs.none": "目前沒有可提供的建議。",
     "recs.saving": "每月約可省 {kwh} 度（{twd} 元，約 {pct}% 用電）。",
+    "products.title": "值得換的產品",
+    "products.none": "沒有可推薦的產品（產品目錄目前是空的）。",
+    "products.one": "換成 {name}，你的「{appliance}」每月約省 {kwh} 度（{twd} 元）。",
+    "products.price": "售價 {price} 元",
+    "products.unavailable": "產品目錄讀不到，其他功能不受影響。",
     "recs.perMonth": "預估每月省 {kwh} 度 / {twd} 元",
     "recs.adviceOnly": "此為用電安全建議，未估算節省度數。",
     "recs.assumption": "假設：{text}",
@@ -183,6 +188,11 @@ const I18N = {
     "recs.title": "Saving tips",
     "recs.none": "No suggestions right now.",
     "recs.saving": "Saves about {kwh} kWh a month ({twd} TWD, roughly {pct}% of usage).",
+    "products.title": "Products worth buying",
+    "products.none": "No products to suggest (the catalogue is empty).",
+    "products.one": "Switch your {appliance} to {name} and save about {kwh} kWh ({twd} TWD) a month.",
+    "products.price": "{price} TWD",
+    "products.unavailable": "The product catalogue is unavailable; everything else still works.",
     "recs.perMonth": "Estimated saving {kwh} kWh / {twd} TWD per month",
     "recs.adviceOnly": "Safety advice; no kWh saving is estimated.",
     "recs.assumption": "Assumption: {text}",
@@ -667,6 +677,7 @@ async function refresh() {
     const data = await api("/household/dashboard", { method: "POST", body });
     state.lastSummary = data.summary;
     renderDashboard(data);
+    await refreshProducts(body.appliances, body.plan_id);
   } catch (error) {
     toast(t("toast.calcFailed", { msg: error.message }), true);
   } finally {
@@ -765,6 +776,67 @@ function renderBreakdown(appliances) {
     track.append(fill);
     li.append(head, track);
     list.append(li);
+  }
+}
+
+/* Product advice from Member B's /product-recommendations (Supabase `products` table).
+   It is an extra: an empty catalogue or a missing table just hides the section. */
+async function refreshProducts(appliances, planId) {
+  renderProducts(null);
+  try {
+    const body = { appliances };
+    if (planId) body.plan_id = planId;
+    const data = await api("/product-recommendations", { method: "POST", body });
+    renderProducts(data);
+  } catch (error) {
+    renderProducts({ unavailable: true });
+  }
+}
+
+function renderProducts(data) {
+  const list = $("products");
+  const note = $("product-note");
+  if (!list || !note) return;
+  list.innerHTML = "";
+  if (data === null) {
+    note.textContent = "";
+    return;
+  }
+  if (data.unavailable) {
+    note.textContent = t("products.unavailable");
+    return;
+  }
+  const rows = (data && data.recommendations) || [];
+  if (rows.length === 0) {
+    note.textContent = t("products.none");
+    return;
+  }
+  note.textContent = t("recs.saving", {
+    kwh: fmt(data.recommendations.reduce((sum, r) => sum + (r.estimated_savings_kwh || 0), 0), 1),
+    twd: fmt(data.recommendations.reduce((sum, r) => sum + (r.estimated_savings_cost || 0), 0), 0),
+    pct: "-",
+  });
+  for (const item of rows) {
+    const box = el("li", "rec");
+    const head = el("div", "rec-head");
+    const name = [item.brand, item.product_name].filter(Boolean).join(" ");
+    head.append(el("span", "rec-sev low", t("products.title")));
+    head.append(el("span", "rec-title", name || "-"));
+    box.append(head);
+    box.append(
+      el(
+        "p",
+        null,
+        t("products.one", {
+          name: name || "-",
+          appliance: pick(item.appliance_zh, item.appliance) || item.appliance || "-",
+          kwh: fmt(item.estimated_savings_kwh, 1),
+          twd: fmt(item.estimated_savings_cost, 0),
+        })
+      )
+    );
+    if (item.price) box.append(el("p", "muted", t("products.price", { price: fmt(item.price, 0) })));
+    list.append(box);
   }
 }
 
