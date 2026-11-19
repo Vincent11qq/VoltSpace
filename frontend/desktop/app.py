@@ -194,11 +194,13 @@ def record_safety(st):
         st["last_status"] = key
         return
     if key != st["last_status"]:
+        used = load.get("total_power_watts") or 0.0
+        limit = load.get("limit_watts") or 0.0
         st["logs"].insert(0, {
             "time": time.strftime("%Y-%m-%d %H:%M"),
             "status": key,
-            "detail": load_line(load.get("total_power_watts") or 0.0,
-                                load.get("limit_watts") or 0.0),
+            "pct": round(used / limit * 100) if limit else None,
+            "detail": load_line(used, limit),
         })
         st["logs"] = st["logs"][:50]
     st["last_status"] = key
@@ -635,6 +637,12 @@ def home_screen(app, p):
         ft.Container(height=8),
         txt("Safety Status", 22, WHITE, True),
         ft.Container(txt(STATUS_LABEL[key], 38, WHITE, True), alignment=center()),
+        # Member A's big figure, re-described: a percentage of the circuit limit is a
+        # fact from /calculate/load, not a safety rating.
+        ft.Container(
+            txt(f"{score:.0f}% of limit" if cap else "-", 30, color, True),
+            alignment=center(),
+        ),
         ft.Container(txt(load_line(load, cap), 14, "#BBBBBB", True), alignment=center()),
         ft.Container(txt("Estimate from the backend - not a guarantee of electrical safety.",
                          11, "#888888", True), alignment=center()),
@@ -806,7 +814,9 @@ def logs_screen(app, p):
             content=ft.Row([
                 circle(ICONS.WARNING_AMBER if lg["status"] != "safe" else ICONS.CHECK, 40, c, WHITE, 26),
                 ft.Column([
-                    txt(STATUS_LABEL.get(lg["status"], lg["status"]), 20, WHITE, True),
+                    txt(STATUS_LABEL.get(lg["status"], lg["status"])
+                        + (f" - {lg['pct']}% of limit" if lg.get("pct") is not None else ""),
+                        20, WHITE, True),
                     txt(lg["detail"], 13, "#CCCCCC", True),
                     txt(lg["time"], 12, YELLOW, True),
                 ], spacing=1, expand=True),
@@ -834,7 +844,7 @@ def guide_screen(app, p):
         "1. Go to My appliances and tap 'Or dial manually' to register a device (power, hours per day, days per month).",
         "2. Turn on 'Used at the same time' for devices that may run together. This drives your Safety Status.",
         "3. Open Cost Estimation to see your monthly bill and each appliance's share.",
-        "4. Set your breaker amps, voltage and tariff in Settings so the results match your home or dorm.",
+        "4. Set your breaker amps and voltage in Settings. The tariff is read-only there: rates live in the backend's tariff table, so every screen quotes the official rate.",
         "5. Check Suggestion for ways to lower cost and avoid overloads.",
     ]
     cards = [ft.Container(txt(s, 16, WHITE, True), bgcolor=CARD, border_radius=20,

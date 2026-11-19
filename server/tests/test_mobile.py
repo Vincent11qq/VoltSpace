@@ -86,9 +86,12 @@ class TestHostedFletPage:
         text = (REPO / "render.yaml").read_text(encoding="utf-8")
         assert "voltspace-flet" in text
         assert "requirements-flet-web.txt" in text
-        assert "startCommand: python desktop/app.py" in text
+        assert "startCommand: python frontend/desktop/app.py" in text
         assert "VOLTSPACE_FLET_WEB" in text
         # The page gets its numbers from the API service.
         assert "VOLTSPACE_API" in text
         # Two services, each with a health check.
         assert text.count("healthCheckPath:") == 2
+        # Every path in the config is repo-relative: no ".." that leaves the root the
+        # platform checked out.
+        assert "../" not in text
