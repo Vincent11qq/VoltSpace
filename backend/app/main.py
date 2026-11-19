@@ -514,6 +514,32 @@ async def recommendations_endpoint(
     )
     return RecommendationResponse(**result)
 
+@app.post(
+    "/product-recommendations",
+    tags=["advice"],
+    summary="Generate energy-saving product recommendations",
+)
+async def product_recommendations_endpoint(payload: RecommendationRequest):
+    products = get_products()
+
+    appliances = [
+        item.model_dump()
+        for item in payload.appliances
+    ]
+
+    tariff = 4.0  # Temporary default tariff in TWD per kWh
+
+    recommendations = get_product_recommendations(
+        appliances=appliances,
+        products=products,
+        tariff=tariff,
+    )
+
+    return {
+        "recommendations": recommendations,
+        "total": len(recommendations),
+    }
+
 
 # --- 5. Simulation -----------------------------------------------------------
 
