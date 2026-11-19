@@ -50,8 +50,7 @@ curl https://<你的網址>/health
 # 1. 下載 cloudflared（Windows，一次就好）
 winget install --id Cloudflare.cloudflared
 
-# 2. 啟動網站（本機）
-cd backend
+# 2. 啟動網站（本機，在專案最上層）
 run_app.bat
 
 # 3. 另開一個終端機，把本機的 8000 埠公開出去

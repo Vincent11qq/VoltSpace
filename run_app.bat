@@ -1,31 +1,47 @@
 @echo off
 REM ===========================================================================
-REM VoltSpace - one-click launcher (Windows)
+REM VoltSpace - one-click launcher (Windows)          <-- repo root entry point
 REM
 REM Double-click this file. It finds a Python on THIS machine, starts the
 REM backend (which also serves the web UI) and opens your browser at the app.
 REM
+REM The backend lives in backend\ ; this file only launches it, so the repo
+REM root stays readable: one launcher here, everything else inside its folder.
+REM
 REM No path in this file is specific to any computer, so a downloaded copy
 REM works as-is as long as Python 3.10+ is installed.
 REM
-REM Options are passed through to start.py:
+REM Options are passed through to backend\start.py:
 REM     run_app.bat --setup         create .venv and install requirements, then exit
 REM     run_app.bat --port 8080
 REM     run_app.bat --flet          also try the Flet desktop UI
+REM     run_app.bat --flet-web      serve the Flet UI as a web page (phone/tablet)
 REM     run_app.bat --check         verify the environment only
 REM ===========================================================================
 setlocal EnableDelayedExpansion
 
 set "HERE=%~dp0"
 set "HERE=%HERE:~0,-1%"
+set "BACKEND=%HERE%\backend"
 set "PYTHONIOENCODING=utf-8"
-cd /d "%HERE%"
 
-REM --- 1. a virtualenv inside this project, if one exists ---------------------
+if not exist "%BACKEND%\start.py" (
+  echo.
+  echo [X] backend\start.py was not found next to this launcher.
+  echo     Run run_app.bat from the folder that contains backend\ .
+  echo.
+  pause
+  exit /b 1
+)
+
+REM start.py resolves app/, .data/ and tools/ relative to its own folder.
+cd /d "%BACKEND%"
+
+REM --- 1. a virtualenv inside the project, if one exists ---------------------
 set "PY="
-if exist "%HERE%\.venv\Scripts\python.exe"    set "PY=%HERE%\.venv\Scripts\python.exe"
-if not defined PY if exist "%HERE%\.venv314\Scripts\python.exe" set "PY=%HERE%\.venv314\Scripts\python.exe"
-if not defined PY if exist "%HERE%\venv\Scripts\python.exe"     set "PY=%HERE%\venv\Scripts\python.exe"
+if exist "%BACKEND%\.venv\Scripts\python.exe"    set "PY=%BACKEND%\.venv\Scripts\python.exe"
+if not defined PY if exist "%BACKEND%\.venv314\Scripts\python.exe" set "PY=%BACKEND%\.venv314\Scripts\python.exe"
+if not defined PY if exist "%BACKEND%\venv\Scripts\python.exe"     set "PY=%BACKEND%\venv\Scripts\python.exe"
 
 REM --- 2. the Windows `py` launcher ------------------------------------------
 if not defined PY (
@@ -59,8 +75,8 @@ if not defined PY (
   echo        ^(on the first installer screen, tick "Add python.exe to PATH"^)
   echo     2. Then double-click this file again.
   echo.
-  echo     If Python is installed but still not found, open a terminal here and run:
-  echo         py start.py --setup
+  echo     If Python is installed but still not found, open a terminal and run:
+  echo         py backend\start.py --setup
   echo.
   pause
   exit /b 1
@@ -69,7 +85,7 @@ if not defined PY (
 echo Using Python: %PY%
 echo.
 
-"%PY%" "%HERE%\start.py" %*
+"%PY%" "%BACKEND%\start.py" %*
 set "RC=%ERRORLEVEL%"
 
 if not "%RC%"=="0" (
@@ -77,9 +93,9 @@ if not "%RC%"=="0" (
   echo [X] The app exited with code %RC%.
   echo.
   echo     If packages are missing, install them once:
-  echo         "%PY%" start.py --setup
+  echo         "%PY%" backend\start.py --setup
   echo     Then check the setup:
-  echo         "%PY%" start.py --check
+  echo         "%PY%" backend\start.py --check
   echo.
   pause
 )

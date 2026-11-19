@@ -29,7 +29,7 @@
 
 | 用途 | 指令 | 位置 |
 | --- | --- | --- |
-| **網頁版（建議）** | `run_app.bat` | `backend/` |
+| **網頁版（建議）** | `run_app.bat` | 專案最上層 |
 | **Flet 桌面版**（已升級 1.0 並改接 API） | `run_app.bat --flet` | `backend/desktop/app.py` |
 
 兩個版本都只透過 API 取得數字，所以和後端測試的結果一致。

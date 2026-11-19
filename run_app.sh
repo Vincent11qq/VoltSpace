@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# VoltSpace - one-click launcher (macOS / Linux)
+# VoltSpace - one-click launcher (macOS / Linux)     <-- repo root entry point
 #
 #   ./run_app.sh              start the app and open the browser
+#   ./run_app.sh --setup      create the virtualenv and install requirements
 #   ./run_app.sh --port 8080
 #   ./run_app.sh --flet       also try the Flet desktop UI
+#   ./run_app.sh --flet-web   serve the Flet UI as a web page (phone/tablet)
 #   ./run_app.sh --check      verify the environment only
+#
+# The backend lives in backend/ ; this file only launches it.
 # ===========================================================================
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$HERE"
+BACKEND="$HERE/backend"
+
+if [ ! -f "$BACKEND/start.py" ]; then
+  echo "[X] backend/start.py was not found next to this launcher."
+  echo "    Run run_app.sh from the folder that contains backend/ ."
+  exit 1
+fi
+
+# start.py resolves app/, .data/ and tools/ relative to its own folder.
+cd "$BACKEND"
 
 PY=""
 for candidate in ".venv/bin/python" ".venv314/bin/python"; do
@@ -27,4 +40,4 @@ if [ -z "$PY" ]; then
 fi
 
 echo "Using Python: $PY"
-exec "$PY" "$HERE/start.py" "$@"
+exec "$PY" "$BACKEND/start.py" "$@"

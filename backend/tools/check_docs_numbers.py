@@ -213,20 +213,23 @@ def fix_share(failures: list[str]) -> None:
                 if not expected or marker not in updated:
                     continue
                 at = updated.index(marker)
-                window_start = max(0, at - 16)
-                window = updated[window_start : at + len(marker) + 16]
-                # the number closest to the marker, before it first then after it
-                before = [
-                    m for m in re.finditer(r"(\d{2})%", window) if m.start() < at - window_start
-                ]
-                after = [
-                    m for m in re.finditer(r"(\d{2})%", window) if m.start() > at - window_start
-                ]
-                pick = before[-1] if before else (after[0] if after else None)
-                if pick is None or pick.group(1) + "%" == expected:
+                # "**89%**（marker）" -> the number right before the marker owns it; in
+                # "| marker | **89%** |" it is the first one after. Only the "NN%" span is
+                # replaced, so the surrounding punctuation survives.
+                span = None
+                attached = re.search(r"(\d{2}%)(?=[^0-9%]{0,4}$)", updated[:at])
+                if attached:
+                    span = (attached.start(1), attached.end(1))
+                else:
+                    after = re.search(r"\d{2}%", updated[at:])
+                    if after:
+                        span = (at + after.start(), at + after.end())
+                if span is None:
                     continue
-                absolute = window_start + pick.start()
-                updated = updated[:absolute] + expected + updated[absolute + len(pick.group(0)) :]
+                current = updated[span[0] : span[1]]
+                if current == expected:
+                    continue
+                updated = updated[: span[0]] + expected + updated[span[1] :]
             if updated != line:
                 lines[index] = updated
                 changed += 1

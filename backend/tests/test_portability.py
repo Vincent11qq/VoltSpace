@@ -12,12 +12,11 @@ from pathlib import Path
 import pytest
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = BACKEND_ROOT.parent
 
 # Files a user runs, so a stale absolute path would break them on another machine.
 RUNNABLE = (
     "start.py",
-    "run_app.bat",
-    "run_app.sh",
     "tools/check_launcher.py",
     "tools/check_web_ui.py",
     "tools/check_desktop.py",
@@ -91,14 +90,14 @@ def test_start_py_offers_a_setup_flag():
 def test_batch_launcher_falls_back_progressively():
     """The .bat must try py, then python, then python3, then known install dirs."""
 
-    text = (BACKEND_ROOT / "run_app.bat").read_text(encoding="utf-8", errors="replace")
+    text = (REPO_ROOT / "run_app.bat").read_text(encoding="utf-8", errors="replace")
     for token in ("where py", "where python3", "where python", "%LOCALAPPDATA%", "C:\\Python%%V"):
         assert token in text, f"run_app.bat should try {token!r}"
     assert "%HERE%" in text, "the .bat should resolve paths relative to its own location"
 
 
 def test_shell_launcher_uses_its_own_directory():
-    text = (BACKEND_ROOT / "run_app.sh").read_text(encoding="utf-8")
+    text = (REPO_ROOT / "run_app.sh").read_text(encoding="utf-8")
     assert "BASH_SOURCE" in text
     assert "command -v python3" in text
 

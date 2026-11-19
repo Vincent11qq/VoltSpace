@@ -12,7 +12,7 @@
 | Member B（資料庫） | 4 個 Supabase SQL 檔 + 3 個 Python 模組 | schema 已修正、模組已重寫 |
 | Member C（後端，我） | `backend/` — 計算核心 + API | 補上儲存與儀表板端點 |
 
-**一鍵啟動**：`run_app.bat`（Windows）或 `./run_app.sh`。
+**一鍵啟動**：專案最上層的 `run_app.bat`（Windows）或 `./run_app.sh`（它會轉呼叫 `backend/start.py`）。
 
 ---
 
@@ -120,7 +120,7 @@ Supabase 的完整 schema 與切換方式見 [`supabase.md`](supabase.md)。
 | `PUT /household/appliances` | 整批覆蓋（前端「儲存全部」） |
 | `POST /household/dashboard` | **一次回傳**用電量、電費、負載、建議 —— 前端只要一個請求 |
 | `web/` + `/` 路由 | 由後端直接提供網頁介面 |
-| `start.py` / `run_app.bat` / `run_app.sh` | 一鍵啟動 |
+| `start.py`（在 `backend/`）與專案最上層的 `run_app.bat` / `run_app.sh` | 一鍵啟動 |
 | `db/schema.sql` | 修正後的 Supabase schema |
 | `docs/*.md` | 整合與 Supabase 說明 |
 
@@ -133,7 +133,7 @@ Supabase 的完整 schema 與切換方式見 [`supabase.md`](supabase.md)。
 
 ```bash
 run_app.bat --check                       # 環境 + 資料檔檢查
-python -m pytest                          # 707 個測試
+python -m pytest                          # 716 個測試
 python tools/smoke_app.py                 # 完整使用流程（需伺服器在跑）
 python tools/check_desktop.py             # Flet 介面邏輯（不開視窗）
 python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
@@ -141,7 +141,7 @@ python tools/probe_errors.py              # 51 個畸形請求，確認無 5xx
 
 | 檢查 | 結果 |
 | --- | --- |
-| `pytest`（Python 3.14 與 3.12） | **707 passed** |
+| `pytest`（Python 3.14 與 3.12） | **716 passed** |
 | `smoke_app.py`（21 項端對端） | 全部通過 |
 | `check_desktop.py`（Flet 介面邏輯） | 全部通過，12 筆家電庫正常渲染 |
 | `probe_errors.py` | 無 5xx，每個 4xx 都是統一格式 |

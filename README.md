@@ -15,12 +15,12 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 | 項目 | 值 |
 | --- | --- |
 | 版本 | `0.2.0` |
-| 測試 | **707 passed**（約 7 秒）|
+| 測試 | **716 passed**（約 7 秒）|
 | API | 5 個計算端點 + 家電儲存 + 儀表板 + 產品建議，共 18 條路由 |
 | 介面 | 網頁版（中文／英文可切換）、Flet 桌面版 |
 | 儲存 | 本機 SQLite（預設）或 Supabase（選用）|
 | 啟動時間 | 約 1.3 秒 |
-| Python 比例 | **89%**（含測試與工具）、**78%**（只算產品程式碼）|
+| Python 比例 | **91%**（含測試與工具）、**80%**（只算產品程式碼）|
 
 ## 目錄
 
@@ -40,18 +40,22 @@ VoltSpace 是 Group 9 的租屋用電管理 App：選好家裡有哪些電器，
 
 ### 第一次使用（下載後）
 
-只需要一個前置條件：**這台電腦有 Python 3.10 以上**，然後**先進入 `backend/` 資料夾**：
+只需要一個前置條件：**這台電腦有 Python 3.10 以上**，然後**在專案最上層**（看得到
+`run_app.bat` 的那一層）執行：
 
 ```
-cd backend
-python start.py --setup        # 建立 .venv 並安裝套件（約 1 分鐘）
+run_app.bat --setup            # Windows：建立 .venv 並安裝套件（約 1 分鐘）
+./run_app.sh --setup           # macOS / Linux
 ```
 
 `start.py` 會**自己尋找**這台電腦上的 Python（依序找
 `.venv` → 執行本程式的解譯器 → `py` → `python` → `python3` → 常見安裝路徑），
 **沒有任何寫死的路徑**，所以複製到任何電腦都能用。
 
-### 之後每次（一樣在 `backend/` 資料夾內）
+> 版面說明：**最上層只有啟動檔與部署設定**（`run_app.bat`、`Dockerfile`、`render.yaml`），
+> 程式本體全部在 `backend/`。啟動檔只負責挑 Python 並轉呼叫 `backend/start.py`。
+
+### 之後每次（一樣在專案最上層）
 
 ```
 run_app.bat            # Windows：雙擊即可
@@ -80,7 +84,6 @@ run_app.bat            # Windows：雙擊即可
 ### 用手機看（同一個 Wi-Fi，不用裝 App）
 
 ```powershell
-cd backend
 run_app.bat --flet-web
 ```
 
@@ -173,6 +176,10 @@ run_app.bat --flet-web
 ```
 VoltSpace/
 ├── README.md                    本文件：怎麼跑、怎麼整合
+├── run_app.bat / run_app.sh     一鍵啟動（挑 Python、起後端、開瀏覽器）
+├── Dockerfile                   選用：容器化部署
+├── render.yaml                  選用：Render Blueprint（API + Flet 兩個服務）
+├── .env.example                 選用：Supabase 設定的範本
 ├── backend/                     ← 可執行的系統（主體）
 │   ├── app/
 │   │   ├── main.py              FastAPI 應用：計算 API + 家電儲存 + 儀表板端點
@@ -200,8 +207,7 @@ VoltSpace/
 │   │   ├── schema.sql           Supabase schema（2 張表 + RLS，已對齊線上專案）
 │   │   └── optional-tariff-plans.sql  選用：把電價表也放進資料庫
 │   ├── start.py                 一鍵啟動器（挑 Python、起後端、開瀏覽器）
-│   ├── run_app.bat / run_app.sh 雙擊用的一鍵入口
-│   ├── tests/                   707 個測試（逐檔說明見第 5 節）
+│   ├── tests/                   716 個測試（逐檔說明見第 5 節）
 │   ├── tools/                   21 支開發工具：產生文件、smoke test、benchmark、離線安裝
 │   ├── docs/
 │   │   ├── integration.md       三個成員的成果如何整合（先讀這份）
@@ -331,7 +337,7 @@ Android Emulator 用 `http://10.0.2.2:8000`，實機測試請用電腦的區域�
 ### 2.3 執行測試
 
 ```bash
-python -m pytest                     # 全部 707 個測試
+python -m pytest                     # 全部 716 個測試
 python -m pytest tests/test_api.py   # 只測 API
 python -m pytest -k tier             # 只測名稱含 tier 的測試
 ```
@@ -914,7 +920,7 @@ python -m app.data_check && python -m pytest tests/test_electricity_bill.py
 
 ```bash
 python -m pytest -q
-# 707 passed
+# 716 passed
 ```
 
 | 檔案 | 測試數 | 重點 |
@@ -1040,7 +1046,7 @@ python tools/fetch_wheels.py --dest .wheels --index https://pypi.org/simple ^
 ### 6.3 驗證安裝是否正確
 
 ```bash
-python -m pytest                     # 應該 707 passed
+python -m pytest                     # 應該 716 passed
 run_app.bat                          # 然後開 http://127.0.0.1:8000/docs
 python tools/smoke_api.py http://127.0.0.1:8000
 ```
@@ -1049,8 +1055,8 @@ python tools/smoke_api.py http://127.0.0.1:8000
 
 | Python | 套件來源 | 結果 |
 | --- | --- | --- |
-| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 707 passed，`/docs` 正常 |
-| 3.12.14（專案內建 runtime） | `.pylibs` | 707 passed，`/docs` 正常 |
+| 3.14.7（系統 Python，無 ensurepip） | `.venv314` + 解壓 wheel | 716 passed，`/docs` 正常 |
+| 3.12.14（專案內建 runtime） | `.pylibs` | 716 passed，`/docs` 正常 |
 
 ---
 

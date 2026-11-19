@@ -95,9 +95,10 @@ VOLTSPACE_SUPABASE_SERVICE_KEY=<service role key>
 $env:VOLTSPACE_SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
 $env:VOLTSPACE_SUPABASE_KEY = "<service_role key>"
 
-# 3) 先檢查，再啟動
+# 3) 先檢查（在 backend/ 內），再回到專案最上層啟動
 cd backend
 python tools/supabase_doctor.py --write-test
+cd ..
 run_app.bat
 ```
 
