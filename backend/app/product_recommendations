@@ -1,166 +1,120 @@
-"""Supabase product catalogue and energy-saving recommendations."""
 
-from __future__ import annotations
-
-import os
 from typing import Any
 
 import httpx
 
-
-PRODUCTS_TABLE = "products"
-
-
-def _get_supabase_config() -> tuple[str, str]:
-    """Read Supabase credentials from backend environment variables."""
-
-    url = os.getenv("SUPABASE_URL", "").rstrip("/")
-
-    key = (
-        os.getenv("SUPABASE_ANON_KEY")
-        or os.getenv("SUPABASE_KEY")
-        or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        or ""
-    )
-
-    if not url or not key:
-        raise RuntimeError(
-            "Missing SUPABASE_URL or Supabase API key in backend environment."
-        )
-
-    return url, key
+from .storage import supabase_settings
 
 
-def fetch_active_products() -> list[dict[str, Any]]:
-    """Fetch active products from Supabase."""
+def get_products() -> list[dict[str, Any]]:
+    """Fetch active products from the Supabase products table."""
 
-    url, key = _get_supabase_config()
+    settings = supabase_settings()
 
-    endpoint = f"{url}/rest/v1/{PRODUCTS_TABLE}"
+    if settings is None:
+        return []
+
+    url = settings["url"].rstrip("/") + "/rest/v1/products"
 
     headers = {
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
+        "apikey": settings["key"],
+        "Authorization": f"Bearer {settings['key']}",
         "Accept": "application/json",
     }
 
     params = {
         "select": "*",
         "is_active": "eq.true",
+        "order": "id.asc",
     }
 
     try:
         with httpx.Client(timeout=15.0) as client:
             response = client.get(
-                endpoint,
+                url,
                 headers=headers,
                 params=params,
             )
+            response.raise_for_status()
 
-        response.raise_for_status()
+        return response.json()
 
     except httpx.HTTPError as exc:
-        raise RuntimeError(f"Could not fetch products from Supabase: {exc}") from exc
-
-    data = response.json()
-
-    if not isinstance(data, list):
-        raise RuntimeError("Unexpected response from Supabase products table.")
-
-    return data
+        raise RuntimeError(
+            f"Could not fetch products from Supabase: {exc}"
+        ) from exc
 
 
-def _normalise_category(category: Any) -> str:
-    """Make category matching case-insensitive."""
-
-    if category is None:
-        return ""
-
-    return str(category).strip().lower().replace("-", "_").replace(" ", "_")
-
-
-def generate_product_recommendations(
+def get_product_recommendations(
     appliances: list[dict[str, Any]],
-    effective_rate_per_kwh: float,
-    *,
-    max_recommendations: int = 5,
+    products: list[dict[str, Any]],
+    tariff: float,
 ) -> list[dict[str, Any]]:
-    """Match appliances with lower-power products and estimate savings."""
+    """Match lower-power products and estimate monthly energy savings."""
 
-    products = fetch_active_products()
-
-    recommendations: list[dict[str, Any]] = []
+    recommendations = []
 
     for appliance in appliances:
-        appliance_category = _normalise_category(appliance.get("category"))
+        appliance_category = appliance.get("category")
+        appliance_watts = appliance.get("power_watts")
+        hours_per_day = appliance.get("hours_per_day") or 0
+        days_per_month = appliance.get("days_per_month") or 30
+        quantity = appliance.get("quantity") or 1
 
-        if not appliance_category:
+        if (
+            not appliance_category
+            or appliance_watts is None
+            or appliance_watts <= 0
+        ):
             continue
 
-        current_power = float(appliance.get("power_watts") or 0)
-        hours_per_day = float(appliance.get("hours_per_day") or 0)
-        days_per_month = float(appliance.get("days_per_month") or 30)
-        quantity = int(appliance.get("quantity") or 1)
+        matching_products = [
+            product
+            for product in products
+            if product.get("category") == appliance_category
+            and product.get("is_active", True)
+            and product.get("power_watts") is not None
+        ]
 
-        if current_power <= 0:
-            continue
+        for product in matching_products:
+            product_watts = product.get("power_watts")
 
-        for product in products:
-            product_category = _normalise_category(product.get("category"))
-
-            # Only recommend products in the same category.
-            if product_category != appliance_category:
+            if product_watts <= 0 or product_watts >= appliance_watts:
                 continue
 
-            product_power = product.get("power_watts")
-
-            if product_power is None:
-                continue
-
-            product_power = float(product_power)
-
-            # Only recommend products that use less power.
-            if product_power >= current_power:
-                continue
+            saved_watts = appliance_watts - product_watts
 
             saved_kwh = (
-                (current_power - product_power)
+                saved_watts
                 * hours_per_day
                 * days_per_month
                 * quantity
                 / 1000
             )
 
-            saved_cost = saved_kwh * effective_rate_per_kwh
+            saved_cost = saved_kwh * tariff
 
-            recommendations.append(
-                {
-                    "appliance_name": appliance.get("name"),
-                    "appliance_category": appliance_category,
-                    "current_power_watts": current_power,
-                    "product": {
-                        "id": product.get("id"),
-                        "name": product.get("name"),
-                        "brand": product.get("brand"),
-                        "model": product.get("model"),
-                        "category": product.get("category"),
-                        "power_watts": product_power,
-                        "voltage": product.get("voltage"),
-                        "energy_rating": product.get("energy_rating"),
-                        "price": product.get("price"),
-                        "currency": product.get("currency", "TWD"),
-                        "product_url": product.get("product_url"),
-                        "image_url": product.get("image_url"),
-                        "description": product.get("description"),
-                    },
-                    "estimated_savings_kwh": round(saved_kwh, 2),
-                    "estimated_savings_cost": round(saved_cost, 2),
-                }
-            )
+            recommendations.append({
+                "appliance": appliance.get("name"),
+                "product_id": product.get("id"),
+                "product_name": product.get("name"),
+                "brand": product.get("brand"),
+                "model": product.get("model"),
+                "category": product.get("category"),
+                "power_watts": product_watts,
+                "price": product.get("price"),
+                "currency": product.get("currency", "TWD"),
+                "energy_rating": product.get("energy_rating"),
+                "product_url": product.get("product_url"),
+                "image_url": product.get("image_url"),
+                "description": product.get("description"),
+                "estimated_savings_kwh": round(saved_kwh, 2),
+                "estimated_savings_cost": round(saved_cost, 2),
+            })
 
     recommendations.sort(
         key=lambda item: item["estimated_savings_cost"],
         reverse=True,
     )
 
-    return recommendations[:max_recommendations]
+    return recommendations
