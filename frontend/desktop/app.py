@@ -562,20 +562,34 @@ def bottom_nav(app):
 
 
 def yellow_header(app, title, size=40, back=None):
-    if back:
-        left = ft.Container(
-            ft.Icon(ICONS.ARROW_BACK, color=NAVY, size=32), left=20, top=45,
-            on_click=lambda e: app.go(back),
-        )
-    else:
-        left = ft.Container(logo(NAVY), left=22, top=40)
+    """Yellow title bar with a tappable back arrow on the left.
+
+    Previously the arrow was an absolutely positioned Container with no width/height inside
+    a Stack, and the title Container (left=0/right=0/top=0/bottom=0) was drawn on top of it -
+    so the arrow had no visible target and swallowed no taps. A Row gives it a real 56x56
+    hit rectangle that sits above the title.
+    """
+
+    arrow = ft.Container(
+        content=ft.Icon(ICONS.ARROW_BACK, color=NAVY, size=30),
+        width=56, height=56, border_radius=28,
+        alignment=center(), ink=True, tooltip="Back",
+        on_click=lambda e: app.back(),
+    )
     return ft.Container(
-        content=ft.Stack([
-            left,
-            ft.Container(txt(title, size, NAVY, True, align=ft.TextAlign.CENTER),
-                         alignment=center(), left=0, right=0, top=0, bottom=0),
-        ]),
+        content=ft.Row(
+            [
+                arrow,
+                ft.Container(
+                    content=txt(title, size, NAVY, True, align=ft.TextAlign.CENTER),
+                    expand=True, alignment=center(),
+                ),
+                ft.Container(width=56, height=56),   # keeps the title optically centred
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
         height=125, bgcolor=YELLOW, border_radius=radius(bl=30, br=30),
+        padding=pad(left=8, right=8),
     )
 
 
@@ -1005,6 +1019,7 @@ class App:
         self.holder = ft.Container()
         self.size = viewport(page)
         self.current = None
+        self.history = []
 
     def build(self, name, **params):
         # Screens lay themselves out for this size (see home_screen's function grid).
@@ -1017,9 +1032,23 @@ class App:
         )
 
     def go(self, name, **params):
+        if self.current is not None:
+            self.history.append(self.current)
         self.current = (name, params)
         self.holder.content = self.build(name, **params)
         self.page.update()
+
+    def back(self):
+        """The header arrow: previous screen, or Home when there is nothing to pop."""
+
+        if self.history:
+            name, params = self.history.pop()
+            self.current = (name, params)
+            self.holder.content = self.build(name, **params)
+            self.page.update()
+            return
+        self.current = None
+        self.go("home")
 
     def rebuild(self):
         """Redraw after the window changed size or the phone rotated."""
