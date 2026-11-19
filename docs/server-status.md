@@ -15,10 +15,10 @@
 
 | 項目 | 數字 |
 | --- | --- |
-| 應用程式碼 | 16 個模組（含 3 個套件 `__init__`）|
-| 測試程式碼 | 24 個檔案 |
-| API 路由 | **18 條**（17 個 JSON 端點 + 1 個網頁介面）|
-| 測試 | **740 個**，全數通過（Python 3.12 與 3.14）|
+| 應用程式碼 | 17 個模組（含 3 個套件 `__init__`）|
+| 測試程式碼 | 25 個檔案 |
+| API 路由 | **19 條**（18 個 JSON 端點 + 1 個網頁介面）|
+| 測試 | **752 個**，全數通過（Python 3.12 與 3.14）|
 | 開發工具 | 21 支腳本 |
 | 電價方案 | 3 種（台電累進、時間電價、租屋單一費率） |
 | 家電參考資料 | 12 種（含典型功率、電壓、使用時數、建議規則） |
@@ -104,7 +104,7 @@
 
   全部錯誤碼只有 4 個：`validation_error`、`invalid_value`、`appliance_not_found`、
   `storage_error`，前端可以據此安全地分流。
-- **pytest** 740 個測試，涵蓋計算函式與 API
+- **pytest** 752 個測試，涵蓋計算函式與 API
 - **API 使用說明**：`README.md` 有每個端點的 curl 範例與完整回應；
   `docs/openapi.json` 可直接匯入 Postman
 - **啟動即驗證資料檔**：電價或家電資料有錯，伺服器直接拒絕啟動
@@ -169,7 +169,7 @@
 
 ---
 
-## 4. API 一覽（18 條路由）
+## 4. API 一覽（19 條路由）
 
 ### 計算（無狀態，純函式）
 
@@ -197,6 +197,7 @@
 | DELETE | `/household/appliances/{id}` | 刪除 |
 | PUT | `/household/appliances` | 整批覆蓋 |
 | POST | `/household/dashboard` | 一次取得儀表板全部數字 |
+| GET | `/household/product-recommendations` | 讀回已存進 Supabase `recommendations` 表的產品建議（`limit` 1-100，預設 20）|
 
 ### 參考資料
 
@@ -215,7 +216,7 @@
 
 ```
 server/
-├── app/                        16 個模組（含 3 個套件 __init__）
+├── app/                        17 個模組（含 3 個套件 __init__）
 │   ├── main.py                 FastAPI 應用：端點、錯誤處理、生命週期
 │   ├── schemas.py              Pydantic 模型（32 個 schema）
 │   ├── store.py                本地 SQLite 儲存
@@ -232,7 +233,7 @@ server/
 │   └── data/
 │       ├── tariffs.json        3 種電價方案
 │       └── appliances.json     12 種家電 + 10 條規則 + 替代機種
-├── tests/                      24 個檔案、740 個測試（第 7 節）
+├── tests/                      25 個檔案、752 個測試（第 7 節）
 ├── tools/                      21 支腳本（第 8 節）
 ├── db/schema.sql               Supabase/PostgreSQL schema
 ├── docs/                       OpenAPI、整合說明、Supabase 說明、審查紀錄
@@ -280,7 +281,7 @@ server/
 
 ---
 
-## 7. 測試（740 個）
+## 7. 測試（752 個）
 
 | 測試檔 | 數量 | 涵蓋 |
 | --- | --- | --- |
@@ -356,7 +357,7 @@ server/
 | 算法 | 目前 |
 | --- | --- |
 | 含測試與工具 | **90%** |
-| 只算產品程式碼（`server/` 不含 tests/tools）| **79%** |
+| 只算產品程式碼（`server/` 不含 tests/tools）| **80%** |
 
 非 Python 的部分主要是前端的 `app.js` / `app.css` / `index.html`。
 **要報哪一個，先跟助教確認計算規則** —— 範例簡報上寫的是

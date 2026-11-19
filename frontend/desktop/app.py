@@ -226,6 +226,26 @@ def make_suggestions(st):
     return tips
 
 
+def product_tips(st):
+    """Product advice from /product-recommendations, one line per product."""
+
+    rows = st.get("products") or []
+    if not rows:
+        return []
+    lines = []
+    for item in rows[:4]:
+        name = " ".join(
+            part for part in (item.get("brand"), item.get("product_name")) if part
+        ).strip() or "Suggested product"
+        saving = item.get("estimated_savings_cost")
+        money = f"Save about NT$ {saving:,.0f} / month" if saving else "Lower power draw"
+        price = item.get("price")
+        price_line = f"NT$ {price:,.0f}" if price else ""
+        lines.append(f"{name}\nFor your {item.get('appliance') or 'appliance'}: {money}"
+                     + (f"\n{price_line}" if price_line else ""))
+    return lines
+
+
 def default_state():
     return {
         "appliances": [],
@@ -239,6 +259,7 @@ def default_state():
         "total_kwh": 0.0,
         "load": {},
         "recs": [],
+        "products": [],
         "error": None,
         "logs": [],
         "last_status": None,
@@ -301,6 +322,23 @@ class Store:
             saved = request("/household/appliances")
         except ApiError as error:
             st["error"] = str(error)
+            st["products"] = []
+            return
+
+        # Product advice is optional: an empty catalogue or no Supabase simply means
+        # nothing to show, never an error banner.
+        try:
+            products = request(
+                "/product-recommendations",
+                method="POST",
+                payload={
+                    "appliances": [to_api(a) for a in st["appliances"]],
+                    **({"plan_id": st["plan_id"]} if st.get("plan_id") else {}),
+                },
+            )
+            st["products"] = products.get("recommendations") or []
+        except ApiError:
+            st["products"] = []
             return
 
         PRESETS[:] = [
@@ -343,6 +381,7 @@ class Store:
         st = self.st
         if not st["appliances"]:
             st["bill"], st["total_kwh"], st["load"], st["recs"], st["rate"] = 0.0, 0.0, {}, [], None
+            st["products"] = []
             return
         payload = {
             "appliances": [to_api(a) for a in st["appliances"]],
@@ -851,13 +890,24 @@ def logs_screen(app, p):
 
 
 def suggest_screen(app, p):
-    cards = [ft.Container(
-        content=ft.Row([circle(ICONS.LIGHTBULB_OUTLINE, 40, YELLOW, NAVY, 26),
-                        ft.Column([txt(t, 16, WHITE, True)], expand=True)], spacing=12,
-                       vertical_alignment=ft.CrossAxisAlignment.START),
-        bgcolor=CARD, border_radius=20, padding=pad(left=14, right=14, top=12, bottom=12))
-        for t in make_suggestions(app.store.st)]
-    return yellow_header(app, "Suggestion", 38, back="home"), scroll_body(cards, top=30)
+    st = app.store.st
+
+    def card(text, icon, tint=YELLOW):
+        return ft.Container(
+            content=ft.Row([circle(icon, 40, tint, NAVY, 26),
+                            ft.Column([txt(text, 16, WHITE, True)], expand=True)], spacing=12,
+                           vertical_alignment=ft.CrossAxisAlignment.START),
+            bgcolor=CARD, border_radius=20,
+            padding=pad(left=14, right=14, top=12, bottom=12))
+
+    controls = [card(t, ICONS.LIGHTBULB_OUTLINE) for t in make_suggestions(st)]
+
+    products = product_tips(st)
+    if products:
+        controls.append(txt("Products worth buying", 20, WHITE, True))
+        controls += [card(t, ICONS.SHOPPING_BAG_OUTLINED) for t in products]
+
+    return yellow_header(app, "Suggestion", 38, back="home"), scroll_body(controls, top=30)
 
 
 def guide_screen(app, p):

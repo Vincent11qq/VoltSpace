@@ -28,8 +28,10 @@ from app.product_recommendations import (
     get_products,
     get_product_recommendations,
 )
+from app.saved_recommendations import latest as list_product_recommendations
+from app.saved_recommendations import save as save_product_recommendations
 
-from fastapi import Body, FastAPI, Request
+from fastapi import Body, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -553,15 +555,37 @@ async def product_recommendations_endpoint(payload: RecommendationRequest):
         tariff=tariff,
     )
 
+    # Keep the advice: Member B's `recommendations` table exists for exactly this, and
+    # nothing used to write to it. Best effort - a missing table or foreign key must not
+    # turn advice into an error, so `saved` simply reports how many rows landed.
+    saved = save_product_recommendations(recommendations)
+
     response = {
         "recommendations": recommendations,
         "total": len(recommendations),
         "rate_per_kwh": round(tariff, 4),
         "currency": "TWD",
+        "saved": saved,
     }
     if warning:
         response["warning"] = warning
     return response
+
+
+@app.get(
+    "/household/product-recommendations",
+    tags=["advice"],
+    summary="Saved product recommendations (Supabase recommendations table)",
+)
+async def saved_product_recommendations(limit: int = Query(20, ge=1, le=100)):
+    """Read back what /product-recommendations stored.
+
+    Empty when Supabase is not configured or nothing has been saved yet - the table is a
+    log, not a cache the app depends on.
+    """
+
+    rows = list_product_recommendations(limit=limit)
+    return {"recommendations": rows, "total": len(rows)}
 
 
 # --- 5. Simulation -----------------------------------------------------------

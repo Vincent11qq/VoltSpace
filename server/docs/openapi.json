@@ -432,6 +432,50 @@
         }
       }
     },
+    "/household/product-recommendations": {
+      "get": {
+        "tags": [
+          "advice"
+        ],
+        "summary": "Saved product recommendations (Supabase recommendations table)",
+        "description": "Read back what /product-recommendations stored.\n\nEmpty when Supabase is not configured or nothing has been saved yet - the table is a\nlog, not a cache the app depends on.",
+        "operationId": "saved_product_recommendations_household_product_recommendations_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/simulate": {
       "post": {
         "tags": [

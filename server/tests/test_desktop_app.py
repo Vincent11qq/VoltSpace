@@ -195,6 +195,24 @@ class TestStoreAgainstStubbedBackend:
             if path == "/calculate/load":
                 return {"verdict": "near_limit", "total_power_watts": 900.0,
                         "limit_watts": 1650.0}
+            if path == "/product-recommendations":
+                return {
+                    "recommendations": [
+                        {
+                            "appliance": "Air conditioner",
+                            "product_id": 1,
+                            "product_name": "Inverter AC",
+                            "brand": "Demo",
+                            "price": 23900,
+                            "estimated_savings_kwh": 54.0,
+                            "estimated_savings_cost": 117.0,
+                        }
+                    ],
+                    "total": 1,
+                    "rate_per_kwh": 2.1698,
+                    "currency": "TWD",
+                    "saved": 0,
+                }
             raise AssertionError(f"unexpected request {method} {path}")
 
         monkeypatch.setattr(desktop, "request", fake_request)
