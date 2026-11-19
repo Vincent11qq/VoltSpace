@@ -415,6 +415,21 @@ class Store:
 # ==================================================================
 # UI 小工具
 # ==================================================================
+def viewport(page, fallback_w=None, fallback_h=None):
+    """The frame to draw in: the design size, shrunk to the real viewport.
+
+    A phone browser is narrower and shorter than the 414x896 design frame (an iPhone
+    reports about 390x700 CSS pixels once the browser chrome is subtracted). Drawing a
+    fixed larger frame clipped the right-hand column and pushed the bottom navigation
+    off-screen, so every screen is built into this instead.
+    """
+
+    width = getattr(page, "width", None) or fallback_w or W
+    height = getattr(page, "height", None) or fallback_h or H
+    # Never grow beyond the design frame; a wide desktop window gets the phone layout.
+    return int(min(width, W)), int(min(height, H))
+
+
 def radius(tl=0, tr=0, bl=0, br=0):
     return ft.BorderRadius(top_left=tl, top_right=tr, bottom_left=bl, bottom_right=br)
 
@@ -607,6 +622,10 @@ def home_screen(app, p):
         height=75, bgcolor=CARD, border_radius=20,
     )
 
+    # Four fixed 88px cells do not fit a 390px phone (they were clipped on the right),
+    # so the cell width follows the frame and the row is allowed to wrap.
+    gaps = 8
+    cell_w = max(68, int((app.size[0] - 84 - 3 * gaps) / 4))
     cells = []
     for target, label, icon in [
         ("cost", "Cost\nEstimation", ICONS.PAYMENTS_OUTLINED),
@@ -616,11 +635,11 @@ def home_screen(app, p):
     ]:
         cells.append(ft.Container(
             content=ft.Column([
-                ft.Container(ft.Icon(icon, color=YELLOW, size=30), width=48, height=48,
+                ft.Container(ft.Icon(icon, color=YELLOW, size=28), width=44, height=44,
                              bgcolor=CARD, border_radius=4, alignment=center()),
-                txt(label, 12, WHITE, True, align=ft.TextAlign.CENTER),
-            ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-            width=88, on_click=lambda e, t=target: app.go(t),
+                txt(label, 11, WHITE, True, align=ft.TextAlign.CENTER),
+            ], spacing=4, horizontal_alignment=ft.CrossAxisAlignment.CENTER, tight=True),
+            width=cell_w, on_click=lambda e, t=target: app.go(t),
         ))
 
     banner = []
@@ -633,7 +652,9 @@ def home_screen(app, p):
         quick,
         ft.Container(height=8),
         txt("Functions", 22, WHITE, True),
-        ft.Row(cells, alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START),
+        ft.Row(cells, alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+               vertical_alignment=ft.CrossAxisAlignment.START,
+               spacing=gaps, run_spacing=12, wrap=True),
         ft.Container(height=8),
         txt("Safety Status", 22, WHITE, True),
         ft.Container(txt(STATUS_LABEL[key], 38, WHITE, True), alignment=center()),
@@ -927,17 +948,29 @@ class App:
         self.page = page
         self.store = store or Store()
         self.holder = ft.Container()
+        self.size = viewport(page)
+        self.current = None
 
     def build(self, name, **params):
+        # Screens lay themselves out for this size (see home_screen's function grid).
+        self.size = viewport(self.page)
         header, body = SCREENS[name](self, params)
         return ft.Container(
             content=ft.Column([header, body, bottom_nav(self)], spacing=0),
-            width=W, height=H, bgcolor=DARK, clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            width=self.size[0], height=self.size[1], bgcolor=DARK,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
         )
 
     def go(self, name, **params):
+        self.current = (name, params)
         self.holder.content = self.build(name, **params)
         self.page.update()
+
+    def rebuild(self):
+        """Redraw after the window changed size or the phone rotated."""
+
+        if getattr(self, "current", None):
+            self.go(*self.current[:1], **self.current[1])
 
 
 def main(page: ft.Page):
@@ -960,6 +993,13 @@ def main(page: ft.Page):
 
     app = App(page)
     page.add(app.holder)
+
+    # A phone rotates, and the web client resizes when browser chrome appears.
+    def on_resized(_event=None):
+        app.size = viewport(page)
+        app.rebuild()
+
+    page.on_resized = on_resized
     app.go("home")
 
 
