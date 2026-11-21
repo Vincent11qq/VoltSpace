@@ -545,6 +545,34 @@ def give_ink(node):
             give_ink(child)
 
 
+def warm_up(timeout=None):
+    """Poll /health until the backend answers, so the first real load is not a burst.
+
+    A cold platform answers the sixth request with 429 but answers /health immediately;
+    waiting here turns that into a normal start. Returns True when the backend answered.
+
+    The wait is bounded (VOLTSPACE_WAIT seconds, default 20) and every failure is ignored:
+    an unreachable backend must still reach the screens, where the error is visible.
+    """
+
+    if timeout is None:
+        try:
+            timeout = float(os.environ.get("VOLTSPACE_WAIT", "20"))
+        except ValueError:
+            timeout = 20.0
+    deadline = time.time() + max(timeout, 0.0)
+    while True:
+        try:
+            answer = request("/health", timeout=10)
+            if isinstance(answer, dict) and answer.get("status") == "ok":
+                return True
+        except Exception:      # noqa: BLE001 - a probe must never break startup
+            pass
+        if time.time() >= deadline:
+            return False
+        time.sleep(1.0)
+
+
 def radius(tl=0, tr=0, bl=0, br=0):
     return ft.BorderRadius(top_left=tl, top_right=tr, bottom_left=bl, bottom_right=br)
 
@@ -1148,6 +1176,9 @@ def main(page: ft.Page):
             page.window_height = H + 39
         except Exception:
             pass
+
+    # One cheap probe before the burst of loading requests (see warm_up).
+    warm_up()
 
     app = App(page)
     page.add(app.holder)
