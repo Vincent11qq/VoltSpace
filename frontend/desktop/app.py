@@ -69,33 +69,58 @@ class ApiError(RuntimeError):
     """The backend refused the request or could not be reached."""
 
 
+RETRY_CODES = {429, 500, 502, 503, 504}
+RETRY_ATTEMPTS = 3
+RETRY_DELAY = 0.6
+
+
 def request(path, *, method="GET", payload=None, timeout=25):
-    """Minimal JSON client. urllib keeps Flet dependency-free."""
+    """Minimal JSON client. urllib keeps Flet dependency-free.
+
+    A platform edge can answer 429 while a service is cold or after a burst of requests
+    (nothing in this project emits 429 - it only returns validation_error, invalid_value,
+    appliance_not_found and storage_error). Those are transient, so retry briefly instead of
+    reporting "the backend is unreachable" to the user.
+    """
+
     data = None if payload is None else json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        f"{API}{path}",
-        data=data,
-        method=method,
-        headers={"Content-Type": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
-            body = response.read().decode("utf-8")
-    except urllib.error.HTTPError as error:
-        raw = error.read().decode("utf-8", "replace")
+    last_error = None
+
+    for attempt in range(RETRY_ATTEMPTS):
+        req = urllib.request.Request(
+            f"{API}{path}",
+            data=data,
+            method=method,
+            headers={"Content-Type": "application/json"},
+        )
         try:
-            detail = json.loads(raw)
-        except ValueError:
-            raise ApiError(f"HTTP {error.code} from {path}") from error
-        message = detail.get("message") or f"HTTP {error.code}"
-        field = detail.get("field")
-        raise ApiError(f"{message}" + (f" ({field})" if field else "")) from error
-    except urllib.error.URLError as error:
-        raise ApiError(f"cannot reach {API} - start the backend first ({error.reason})") from error
-    return json.loads(body) if body else None
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                body = response.read().decode("utf-8")
+            return json.loads(body) if body else None
+        except urllib.error.HTTPError as error:
+            if error.code in RETRY_CODES and attempt < RETRY_ATTEMPTS - 1:
+                delay = RETRY_DELAY * (attempt + 1)
+                try:
+                    delay = max(delay, float(error.headers.get("Retry-After") or 0))
+                except (TypeError, ValueError):
+                    pass
+                time.sleep(min(delay, 5.0))
+                last_error = error
+                continue
+            raw = error.read().decode("utf-8", "replace")
+            try:
+                detail = json.loads(raw)
+            except ValueError:
+                raise ApiError(f"HTTP {error.code} from {path}") from error
+            message = detail.get("message") or f"HTTP {error.code}"
+            field = detail.get("field")
+            raise ApiError(f"{message}" + (f" ({field})" if field else "")) from error
+        except urllib.error.URLError as error:
+            raise ApiError(f"cannot reach {API} - start the backend first ({error.reason})") from error
+
+    raise ApiError(f"HTTP {last_error.code} from {path} (after {RETRY_ATTEMPTS} attempts)")
 
 
-# 圖示：用後端家電庫的 key 對應。查不到的一律用 POWER，不會因缺少圖示而崩潰。
 def _icon(name):
     return getattr(ICONS, name, ICONS.POWER)
 
@@ -314,34 +339,61 @@ class Store:
 
     # --- backend ----------------------------------------------------------
     def reload(self):
+        """Load the catalogue, the plan and the household - each independently.
+
+        They used to share one try block, so a single 429 discarded all three and left the
+        app showing "NO LIMIT SET" with no appliances. Now a failure only loses its own
+        piece, and the catalogue/plan fall back to the last good copy cached on disk.
+        """
+
         st = self.st
         st["error"] = None
+        cached = self.prefs.get("cached") or {}
+
         try:
             presets = request("/appliances/presets")
+            self.prefs["cached"] = {**cached, "presets": presets}
+            self._write_prefs()
+        except ApiError as error:
+            presets = cached.get("presets")
+            st["error"] = str(error)
+
+        try:
             tariffs = request("/tariffs")
+            self.prefs["cached"] = {**self.prefs.get("cached", {}), "tariffs": tariffs}
+            self._write_prefs()
+        except ApiError as error:
+            tariffs = (self.prefs.get("cached") or {}).get("tariffs")
+            st["error"] = st["error"] or str(error)
+
+        try:
             saved = request("/household/appliances")
         except ApiError as error:
-            st["error"] = str(error)
-            return
+            saved = {"appliances": []}
+            st["error"] = st["error"] or str(error)
 
-        PRESETS[:] = [
-            (p["name_en"], p["key"], p["power_watts"], p["hours_per_day"])
-            for p in presets["presets"]
-        ]
-        NAME_INDEX.clear()
-        for p in presets["presets"]:
-            NAME_INDEX[str(p["name_en"]).lower()] = p["key"]
-            NAME_INDEX[str(p["name_zh"]).lower()] = p["key"]
+        if presets:
+            PRESETS[:] = [
+                (p["name_en"], p["key"], p["power_watts"], p["hours_per_day"])
+                for p in presets["presets"]
+            ]
+            NAME_INDEX.clear()
+            for p in presets["presets"]:
+                NAME_INDEX[str(p["name_en"]).lower()] = p["key"]
+                NAME_INDEX[str(p["name_zh"]).lower()] = p["key"]
 
-        if not st.get("amps"):
-            st["amps"] = float(presets["default_circuit_amps"])
-        if not st.get("volts"):
-            st["volts"] = float(presets["default_voltage"])
-        if not st.get("plan_id"):
-            st["plan_id"] = tariffs["default_plan_id"]
-        st["plan_name"] = next(
-            (p["name_en"] for p in tariffs["plans"] if p["id"] == st["plan_id"]), st["plan_id"]
-        )
+            if not st.get("amps"):
+                st["amps"] = float(presets["default_circuit_amps"])
+            if not st.get("volts"):
+                st["volts"] = float(presets["default_voltage"])
+
+        if tariffs:
+            if not st.get("plan_id"):
+                st["plan_id"] = tariffs["default_plan_id"]
+            st["plan_name"] = next(
+                (p["name_en"] for p in tariffs["plans"] if p["id"] == st["plan_id"]),
+                st["plan_id"],
+            )
 
         st["appliances"] = [
             {
