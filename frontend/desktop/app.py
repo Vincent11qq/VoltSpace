@@ -69,6 +69,9 @@ class ApiError(RuntimeError):
     """The backend refused the request or could not be reached."""
 
 
+# The catalogue and the tariff table change only when the backend is redeployed, so a
+# cached copy keeps the Flet service from shouting six requests at the API per start.
+CATALOGUE_TTL = 3600
 RETRY_CODES = {429, 500, 502, 503, 504}
 RETRY_ATTEMPTS = 3
 RETRY_DELAY = 0.6
@@ -305,8 +308,10 @@ def to_api(a):
 class Store:
     """The backend's saved household, plus the local interface preferences."""
 
-    def __init__(self, prefs_path=PREFS_FILE):
-        self.path = prefs_path
+    def __init__(self, prefs_path=None):
+        # Resolved here, not as a default argument: a default would bind the module
+        # constant at import time and ignore later overrides (tests, packaged builds).
+        self.path = prefs_path or PREFS_FILE
         self.prefs = {}
         self.st = default_state()
         self._read_prefs()
@@ -321,6 +326,17 @@ class Store:
                 self.prefs = loaded
         except Exception:
             self.prefs = {}
+
+    def _remember_cached(self, name, value):
+        """Store a catalogue/tariff snapshot with the time it was fetched."""
+
+        cached = dict(self.prefs.get("cached") or {})
+        cached[name] = value
+        fetched = dict(self.prefs.get("fetched_at") or {})
+        fetched[name] = time.time()
+        self.prefs["cached"] = cached
+        self.prefs["fetched_at"] = fetched
+        self._write_prefs()
 
     def _write_prefs(self):
         try:
@@ -349,22 +365,38 @@ class Store:
         st = self.st
         st["error"] = None
         cached = self.prefs.get("cached") or {}
+        fetched_at = self.prefs.get("fetched_at") or {}
+        now = time.time()
 
-        try:
-            presets = request("/appliances/presets")
-            self.prefs["cached"] = {**cached, "presets": presets}
-            self._write_prefs()
-        except ApiError as error:
-            presets = cached.get("presets")
-            st["error"] = str(error)
+        def fresh(name):
+            """A cached copy younger than CATALOGUE_TTL seconds is good enough."""
 
-        try:
-            tariffs = request("/tariffs")
-            self.prefs["cached"] = {**self.prefs.get("cached", {}), "tariffs": tariffs}
-            self._write_prefs()
-        except ApiError as error:
-            tariffs = (self.prefs.get("cached") or {}).get("tariffs")
-            st["error"] = st["error"] or str(error)
+            stored = fetched_at.get(name)
+            return (
+                cached.get(name) is not None
+                and isinstance(stored, (int, float))
+                and now - stored < CATALOGUE_TTL
+            )
+
+        if fresh("presets"):
+            presets = cached["presets"]
+        else:
+            try:
+                presets = request("/appliances/presets")
+                self._remember_cached("presets", presets)
+            except ApiError as error:
+                presets = cached.get("presets")
+                st["error"] = str(error)
+
+        if fresh("tariffs"):
+            tariffs = cached["tariffs"]
+        else:
+            try:
+                tariffs = request("/tariffs")
+                self._remember_cached("tariffs", tariffs)
+            except ApiError as error:
+                tariffs = cached.get("tariffs")
+                st["error"] = st["error"] or str(error)
 
         try:
             saved = request("/household/appliances")

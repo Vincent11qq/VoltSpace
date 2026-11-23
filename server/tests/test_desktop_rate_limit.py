@@ -25,7 +25,7 @@ import desktop.app as app_module  # noqa: E402
 
 
 @pytest.fixture()
-def fake_http(monkeypatch):
+def fake_http(monkeypatch, tmp_path):
     """Serve canned responses per path; unknown paths raise like the code would."""
 
     calls: list[str] = []
@@ -55,7 +55,7 @@ def fake_http(monkeypatch):
     })
 
     monkeypatch.setattr(app_module, "request", handler)
-    monkeypatch.setattr(app_module, "PREFS_FILE", str(SERVER / ".test-data" / "prefs_429.json"))
+    monkeypatch.setattr(app_module, "PREFS_FILE", str(tmp_path / "prefs.json"))
     return calls, responses
 
 
