@@ -373,10 +373,42 @@ function setLanguage(next) {
 /* ------------------------------------------------------------------ network */
 
 const RETRY_CODES = new Set([429, 500, 502, 503, 504]);
-const RETRY_ATTEMPTS = 3;
+const RETRY_ATTEMPTS = 5;
+// A free-tier service can be limited for several seconds while it wakes up, so the wait has
+// to grow. Jitter keeps several parallel requests from retrying in lockstep.
+const RETRY_BASE_MS = 800;
+const RETRY_MAX_MS = 8000;
+// The catalogue and the tariff table only change when the backend is redeployed.
+const CATALOGUE_TTL_MS = 60 * 60 * 1000;
+const CATALOGUE_KEY = "voltspace.catalogue.v1";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function backoffMs(attempt) {
+  const base = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS);
+  return base + Math.random() * 250;
+}
+
+function readCatalogueCache() {
+  try {
+    const raw = localStorage.getItem(CATALOGUE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || Date.now() - saved.at > CATALOGUE_TTL_MS) return null;
+    return saved;
+  } catch {
+    return null;
+  }
+}
+
+function writeCatalogueCache(presets, tariffs) {
+  try {
+    localStorage.setItem(CATALOGUE_KEY, JSON.stringify({ at: Date.now(), presets, tariffs }));
+  } catch {
+    /* private mode / quota: caching is an optimisation, never a requirement */
+  }
 }
 
 async function api(path, { method = "GET", body, attempts = RETRY_ATTEMPTS } = {}) {
@@ -393,7 +425,8 @@ async function api(path, { method = "GET", body, attempts = RETRY_ATTEMPTS } = {
     response = await fetch(API + path, options);
     if (!RETRY_CODES.has(response.status) || attempt === attempts - 1) break;
     const retryAfter = Number(response.headers.get("Retry-After"));
-    await sleep(Math.min(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 600 * (attempt + 1), 5000));
+    const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
+    await sleep(Math.min(wait, RETRY_MAX_MS));
   }
   const text = await response.text();
   let payload = null;
@@ -490,7 +523,17 @@ async function boot() {
     return;
   }
 
-  const [presets, tariffs] = await Promise.all([api("/appliances/presets"), api("/tariffs")]);
+  // Reuse the catalogue if this browser fetched it within the last hour: two fewer
+  // requests per visit, which is exactly what a rate-limited edge punishes.
+  const cached = readCatalogueCache();
+  let presets;
+  let tariffs;
+  if (cached) {
+    ({ presets, tariffs } = cached);
+  } else {
+    [presets, tariffs] = await Promise.all([api("/appliances/presets"), api("/tariffs")]);
+    writeCatalogueCache(presets, tariffs);
+  }
   state.presets = presets.presets;
   state.circuits = presets.circuits;
   state.plans = tariffs.plans;
