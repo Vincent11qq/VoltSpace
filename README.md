@@ -245,6 +245,7 @@ VoltSpace/
 │   └── desktop/app.py           Flet 桌面版（數字全部來自 API）
 ├── docs/
 │   ├── server-status.md         伺服器完成度、測試與限制的總整理
+│   ├── qa.md                    報告問答準備（助教可能問的問題）
 │   └── deploy.md                部署成網站（Render / Docker / Cloudflare Tunnel）
 └── Supabase/
     ├── member-b-latest/         Member B 最新交付的 SQL（線上專案即用這份）
