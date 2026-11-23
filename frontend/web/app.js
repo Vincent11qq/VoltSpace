@@ -372,13 +372,29 @@ function setLanguage(next) {
 
 /* ------------------------------------------------------------------ network */
 
-async function api(path, { method = "GET", body } = {}) {
+const RETRY_CODES = new Set([429, 500, 502, 503, 504]);
+const RETRY_ATTEMPTS = 3;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function api(path, { method = "GET", body, attempts = RETRY_ATTEMPTS } = {}) {
   const options = { method, headers: {} };
   if (body !== undefined) {
     options.headers["Content-Type"] = "application/json";
     options.body = JSON.stringify(body);
   }
-  const response = await fetch(API + path, options);
+  // 429 comes from the platform edge (a cold or busy service hit by a burst), not from this
+  // app: the API only returns validation_error, invalid_value, appliance_not_found and
+  // storage_error. It clears on its own, so retry instead of showing "HTTP 429".
+  let response;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    response = await fetch(API + path, options);
+    if (!RETRY_CODES.has(response.status) || attempt === attempts - 1) break;
+    const retryAfter = Number(response.headers.get("Retry-After"));
+    await sleep(Math.min(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 600 * (attempt + 1), 5000));
+  }
   const text = await response.text();
   let payload = null;
   try {
